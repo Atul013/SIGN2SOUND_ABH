@@ -139,3 +139,11 @@ dmypy.json
 # Cython
 cython_debug/
 
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.vscode/
+.idea/
+venv/
+env/
+*.log
