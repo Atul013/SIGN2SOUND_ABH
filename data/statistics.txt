@@ -1,0 +1,117 @@
+# ASL Alphabet Dataset Statistics
+
+## Dataset Overview
+
+**Total Letters**: 26 (A-Z)  
+**Total Samples**: [TO BE FILLED]  
+**Dataset Source**: Kaggle ASL Alphabet Dataset  
+**Download Date**: [TO BE FILLED]  
+
+## Data Splits
+
+| Split | Samples | Percentage | Samples per Letter (avg) |
+|-------|---------|------------|--------------------------|
+| Train | [TO BE FILLED] | 70% | [TO BE FILLED] |
+| Validation | [TO BE FILLED] | 15% | [TO BE FILLED] |
+| Test | [TO BE FILLED] | 15% | [TO BE FILLED] |
+| **Total** | **[TO BE FILLED]** | **100%** | **[TO BE FILLED]** |
+
+## Per-Letter Distribution
+
+| Letter | Train | Val | Test | Total | Percentage |
+|--------|-------|-----|------|-------|------------|
+| A | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED]% |
+| B | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED]% |
+| C | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED]% |
+| D | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED]% |
+| E | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED]% |
+| F | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED]% |
+| G | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED]% |
+| H | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED]% |
+| I | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED]% |
+| J | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED]% |
+| K | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED]% |
+| L | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED]% |
+| M | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED]% |
+| N | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED]% |
+| O | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED]% |
+| P | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED]% |
+| Q | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED]% |
+| R | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED]% |
+| S | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED]% |
+| T | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED]% |
+| U | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED]% |
+| V | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED]% |
+| W | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED]% |
+| X | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED]% |
+| Y | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED]% |
+| Z | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED]% |
+
+## Data Quality Metrics
+
+**Average Sequence Length**: [TO BE FILLED] frames  
+**Min Sequence Length**: [TO BE FILLED] frames  
+**Max Sequence Length**: [TO BE FILLED] frames  
+**Std Deviation**: [TO BE FILLED] frames  
+
+**Missing Landmarks**: [TO BE FILLED]%  
+**Low Confidence Samples**: [TO BE FILLED]%  
+**Corrupted Samples**: [TO BE FILLED]  
+
+## Preprocessing Statistics
+
+**Preprocessing Method**: Developer A's pipeline  
+**Feature Extraction**: MediaPipe Hand Landmarks  
+**Feature Dimension**: 63 (21 landmarks × 3 coordinates)  
+**Temporal Smoothing**: Applied  
+**Noise Filtering**: Applied  
+
+## Data Augmentation
+
+**Augmentation Techniques**:
+- Random scaling: 0.9-1.1x
+- Random noise: std=0.01
+- Temporal shift: ±2 frames
+
+**Augmentation Applied To**: Training set only
+
+## Class Balance
+
+**Most Common Letter**: [TO BE FILLED] ([TO BE FILLED] samples)  
+**Least Common Letter**: [TO BE FILLED] ([TO BE FILLED] samples)  
+**Balance Ratio**: [TO BE FILLED]:1  
+**Class Imbalance**: [BALANCED / IMBALANCED]  
+
+## File Formats
+
+**Raw Data**: JPG images (640x480)  
+**Processed Data**: JSON files with landmarks  
+**Feature Format**: NumPy arrays (float32)  
+
+## Storage Requirements
+
+**Raw Data Size**: [TO BE FILLED] GB  
+**Processed Data Size**: [TO BE FILLED] MB  
+**Total Storage**: [TO BE FILLED] GB  
+
+## Data Collection Info
+
+**Collection Method**: Kaggle Dataset  
+**Contributors**: Multiple contributors  
+**License**: [TO BE FILLED]  
+**Citation**: [TO BE FILLED]  
+
+## Notes
+
+- This dataset focuses on ASL fingerspelling alphabet (A-Z)
+- Letter J requires motion (drawing "J" in air)
+- All other letters are static hand poses
+- Dataset includes varied backgrounds and lighting conditions
+- Multiple hand sizes and skin tones represented
+
+## To Update This File
+
+Run the dataset statistics script:
+```bash
+python scripts/compute_statistics.py --data-dir data --output data/statistics.txt
+```

@@ -1,0 +1,98 @@
+# Training Configuration for ASL Alphabet Recognition
+
+# Model Configuration
+model:
+  type: "gru"  # Options: "cnn", "gru", "lstm"
+  input_dim: 63  # 21 landmarks * 3 (x, y, z)
+  num_classes: 26  # A-Z
+  
+  # Model-specific parameters
+  gru:
+    hidden_size: 128
+    num_layers: 2
+    dropout: 0.3
+  
+  lstm:
+    hidden_size: 128
+    num_layers: 2
+    dropout: 0.3
+  
+  cnn:
+    conv_filters: [64, 128, 256]
+    kernel_size: 3
+    dropout: 0.3
+
+# Data Configuration
+data:
+  data_dir: "data"
+  batch_size: 32
+  max_sequence_length: 30
+  num_workers: 4
+  
+  # Data augmentation
+  augmentation:
+    enabled: true
+    scale_range: [0.9, 1.1]
+    noise_std: 0.01
+    temporal_shift: 2
+
+# Training Configuration
+training:
+  epochs: 100
+  learning_rate: 0.001
+  optimizer: "adam"  # Options: "adam", "sgd", "rmsprop"
+  
+  # Learning rate schedule
+  lr_schedule:
+    type: "reduce_on_plateau"  # Options: "step", "exponential", "reduce_on_plateau"
+    factor: 0.5
+    patience: 5
+    min_lr: 0.00001
+  
+  # Early stopping
+  early_stopping:
+    enabled: true
+    patience: 10
+    min_delta: 0.001
+  
+  # Gradient clipping
+  gradient_clipping:
+    enabled: true
+    max_norm: 1.0
+  
+  # Checkpointing
+  checkpoint:
+    save_best_only: true
+    save_frequency: 5  # Save every N epochs
+    checkpoint_dir: "checkpoints"
+    monitor: "val_accuracy"  # Metric to monitor
+    mode: "max"  # "max" for accuracy, "min" for loss
+
+# Validation Configuration
+validation:
+  frequency: 1  # Validate every N epochs
+  metrics: ["accuracy", "precision", "recall", "f1"]
+
+# Logging Configuration
+logging:
+  log_dir: "results"
+  tensorboard: true
+  log_frequency: 10  # Log every N batches
+  save_predictions: true
+  
+# Evaluation Configuration
+evaluation:
+  metrics: ["accuracy", "precision", "recall", "f1", "confusion_matrix"]
+  save_confusion_matrix: true
+  save_per_class_metrics: true
+  results_dir: "results"
+
+# Hardware Configuration
+hardware:
+  device: "auto"  # Options: "auto", "cpu", "cuda", "mps"
+  mixed_precision: false
+  num_threads: 4
+
+# Reproducibility
+seed: 42
+deterministic: true
