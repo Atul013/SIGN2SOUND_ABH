@@ -1,149 +1,183 @@
 """
-Sign2Sound Phase 2 - Vocabulary Definition
+Sign2Sound Phase 2 - ASL Alphabet Vocabulary
 
 This module defines the vocabulary for Phase 2 of the Sign2Sound project.
-It includes 15 functional ASL signs covering greetings, basic needs, questions, and responses.
+It includes the 26 letters of the American Sign Language (ASL) fingerspelling alphabet.
+
+This allows users to spell any word using fingerspelling, making the system
+much more versatile than a limited word-based vocabulary.
 """
 
-# Sign to ID mapping
-SIGN_TO_ID = {
-    "HELLO": 0,
-    "GOODBYE": 1,
-    "THANK_YOU": 2,
-    "PLEASE": 3,
-    "YES": 4,
-    "NO": 5,
-    "HELP": 6,
-    "WATER": 7,
-    "FOOD": 8,
-    "BATHROOM": 9,
-    "SORRY": 10,
-    "UNDERSTAND": 11,
-    "WHAT": 12,
-    "WHERE": 13,
-    "HOW": 14
-}
+import string
 
-# ID to sign mapping (reverse lookup)
-ID_TO_SIGN = {v: k for k, v in SIGN_TO_ID.items()}
+# ASL Alphabet: A-Z (26 letters)
+LETTERS = list(string.ascii_uppercase)
+
+# Letter to ID mapping (A=0, B=1, ..., Z=25)
+LETTER_TO_ID = {letter: idx for idx, letter in enumerate(LETTERS)}
+
+# ID to letter mapping (reverse lookup)
+ID_TO_LETTER = {idx: letter for letter, idx in LETTER_TO_ID.items()}
 
 # Number of classes
-NUM_CLASSES = 15
+NUM_CLASSES = 26
 
-# Sign categories
-CATEGORIES = {
-    "Greetings": ["HELLO", "GOODBYE"],
-    "Courtesy": ["THANK_YOU", "PLEASE", "SORRY"],
-    "Responses": ["YES", "NO"],
-    "Needs": ["HELP", "WATER", "FOOD", "BATHROOM"],
-    "Questions": ["UNDERSTAND", "WHAT", "WHERE", "HOW"]
+# Letter groups (for organization and learning)
+LETTER_GROUPS = {
+    "A-E": ["A", "B", "C", "D", "E"],
+    "F-J": ["F", "G", "H", "I", "J"],
+    "K-O": ["K", "L", "M", "N", "O"],
+    "P-T": ["P", "Q", "R", "S", "T"],
+    "U-Z": ["U", "V", "W", "X", "Y", "Z"]
 }
 
-# Category to signs mapping
-CATEGORY_TO_SIGNS = CATEGORIES
+# Difficulty levels (based on hand shape complexity)
+DIFFICULTY_LEVELS = {
+    "Easy": ["A", "B", "C", "O", "S"],  # Simple fist/closed hand shapes
+    "Medium": ["D", "F", "G", "H", "I", "K", "L", "P", "Q", "U", "V", "W", "X", "Y"],
+    "Hard": ["E", "M", "N", "R", "T", "Z"],  # Complex finger positions
+    "Very Hard": ["J"]  # Requires motion
+}
 
-# Sign to category mapping
-SIGN_TO_CATEGORY = {}
-for category, signs in CATEGORIES.items():
-    for sign in signs:
-        SIGN_TO_CATEGORY[sign] = category
 
-
-def get_sign_id(sign_name: str) -> int:
+def get_letter_id(letter: str) -> int:
     """
-    Get the class ID for a given sign name.
+    Get the class ID for a given letter.
     
     Args:
-        sign_name: Name of the sign (e.g., "HELLO")
+        letter: Single letter (e.g., "A" or "a")
         
     Returns:
-        Class ID (0-14)
+        Class ID (0-25)
         
     Raises:
-        KeyError: If sign name is not in vocabulary
+        KeyError: If letter is not A-Z
     """
-    return SIGN_TO_ID[sign_name.upper()]
+    return LETTER_TO_ID[letter.upper()]
 
 
-def get_sign_name(sign_id: int) -> str:
+def get_letter(letter_id: int) -> str:
     """
-    Get the sign name for a given class ID.
+    Get the letter for a given class ID.
     
     Args:
-        sign_id: Class ID (0-14)
+        letter_id: Class ID (0-25)
         
     Returns:
-        Sign name (e.g., "HELLO")
+        Letter (e.g., "A")
         
     Raises:
-        KeyError: If sign ID is not in vocabulary
+        KeyError: If letter ID is not 0-25
     """
-    return ID_TO_SIGN[sign_id]
+    return ID_TO_LETTER[letter_id]
 
 
-def get_category(sign_name: str) -> str:
+def get_difficulty(letter: str) -> str:
     """
-    Get the category for a given sign.
+    Get the difficulty level for a given letter.
     
     Args:
-        sign_name: Name of the sign
+        letter: Single letter
         
     Returns:
-        Category name (e.g., "Greetings")
+        Difficulty level ("Easy", "Medium", "Hard", "Very Hard")
     """
-    return SIGN_TO_CATEGORY.get(sign_name.upper(), "Unknown")
+    letter = letter.upper()
+    for difficulty, letters in DIFFICULTY_LEVELS.items():
+        if letter in letters:
+            return difficulty
+    return "Unknown"
 
 
-def get_signs_by_category(category: str) -> list:
+def get_letters_by_difficulty(difficulty: str) -> list:
     """
-    Get all signs in a given category.
+    Get all letters at a given difficulty level.
     
     Args:
-        category: Category name (e.g., "Greetings")
+        difficulty: Difficulty level (e.g., "Easy")
         
     Returns:
-        List of sign names in that category
+        List of letters at that difficulty
     """
-    return CATEGORY_TO_SIGNS.get(category, [])
+    return DIFFICULTY_LEVELS.get(difficulty, [])
 
 
-def is_valid_sign(sign_name: str) -> bool:
+def is_valid_letter(letter: str) -> bool:
     """
-    Check if a sign name is in the vocabulary.
+    Check if a letter is in the vocabulary.
     
     Args:
-        sign_name: Name of the sign
+        letter: Single letter
         
     Returns:
-        True if sign is in vocabulary, False otherwise
+        True if letter is A-Z, False otherwise
     """
-    return sign_name.upper() in SIGN_TO_ID
+    return len(letter) == 1 and letter.upper() in LETTER_TO_ID
 
 
-def get_all_signs() -> list:
+def get_all_letters() -> list:
     """
-    Get all sign names in the vocabulary.
+    Get all letters in the vocabulary.
     
     Returns:
-        List of all sign names
+        List of all letters (A-Z)
     """
-    return list(SIGN_TO_ID.keys())
+    return LETTERS.copy()
+
+
+def word_to_ids(word: str) -> list:
+    """
+    Convert a word to a sequence of letter IDs.
+    
+    Args:
+        word: Word to convert (e.g., "HELLO")
+        
+    Returns:
+        List of letter IDs
+        
+    Example:
+        >>> word_to_ids("HELLO")
+        [7, 4, 11, 11, 14]  # H=7, E=4, L=11, O=14
+    """
+    return [get_letter_id(char) for char in word if char.isalpha()]
+
+
+def ids_to_word(letter_ids: list) -> str:
+    """
+    Convert a sequence of letter IDs to a word.
+    
+    Args:
+        letter_ids: List of letter IDs
+        
+    Returns:
+        Reconstructed word
+        
+    Example:
+        >>> ids_to_word([7, 4, 11, 11, 14])
+        "HELLO"
+    """
+    return ''.join(get_letter(lid) for lid in letter_ids)
 
 
 def print_vocabulary():
     """Print the complete vocabulary in a formatted way."""
-    print("=" * 60)
-    print("Sign2Sound Phase 2 - Vocabulary")
-    print("=" * 60)
-    print(f"\nTotal Signs: {NUM_CLASSES}\n")
+    print("=" * 70)
+    print("Sign2Sound Phase 2 - ASL Fingerspelling Alphabet")
+    print("=" * 70)
+    print(f"\nTotal Letters: {NUM_CLASSES}\n")
     
-    for category, signs in CATEGORIES.items():
-        print(f"\n{category}:")
-        for sign in signs:
-            sign_id = SIGN_TO_ID[sign]
-            print(f"  [{sign_id:2d}] {sign}")
+    print("Alphabet Groups:")
+    print("-" * 70)
+    for group_name, letters in LETTER_GROUPS.items():
+        letter_ids = [f"{letter}({LETTER_TO_ID[letter]})" for letter in letters]
+        print(f"{group_name:8s}: {', '.join(letter_ids)}")
     
-    print("\n" + "=" * 60)
+    print("\n\nDifficulty Levels:")
+    print("-" * 70)
+    for difficulty, letters in DIFFICULTY_LEVELS.items():
+        print(f"{difficulty:12s}: {', '.join(letters)}")
+    
+    print("\n" + "=" * 70)
 
 
 if __name__ == "__main__":
@@ -151,25 +185,34 @@ if __name__ == "__main__":
     print_vocabulary()
     
     print("\n\nExample Usage:")
-    print("-" * 60)
+    print("-" * 70)
     
-    # Get sign ID
-    sign = "HELLO"
-    sign_id = get_sign_id(sign)
-    print(f"Sign '{sign}' has ID: {sign_id}")
+    # Get letter ID
+    letter = "A"
+    letter_id = get_letter_id(letter)
+    print(f"Letter '{letter}' has ID: {letter_id}")
     
-    # Get sign name from ID
-    retrieved_sign = get_sign_name(sign_id)
-    print(f"ID {sign_id} corresponds to: {retrieved_sign}")
+    # Get letter from ID
+    retrieved_letter = get_letter(letter_id)
+    print(f"ID {letter_id} corresponds to: {retrieved_letter}")
     
-    # Get category
-    category = get_category(sign)
-    print(f"Sign '{sign}' belongs to category: {category}")
+    # Get difficulty
+    difficulty = get_difficulty(letter)
+    print(f"Letter '{letter}' difficulty: {difficulty}")
     
-    # Get all signs in a category
-    greetings = get_signs_by_category("Greetings")
-    print(f"\nAll greetings: {greetings}")
+    # Convert word to IDs
+    word = "HELLO"
+    ids = word_to_ids(word)
+    print(f"\nWord '{word}' as IDs: {ids}")
     
-    # Check if sign is valid
-    print(f"\nIs 'HELLO' valid? {is_valid_sign('HELLO')}")
-    print(f"Is 'INVALID' valid? {is_valid_sign('INVALID')}")
+    # Convert IDs back to word
+    reconstructed = ids_to_word(ids)
+    print(f"IDs {ids} as word: {reconstructed}")
+    
+    # Check if letter is valid
+    print(f"\nIs 'A' valid? {is_valid_letter('A')}")
+    print(f"Is '1' valid? {is_valid_letter('1')}")
+    
+    # Get easy letters
+    easy_letters = get_letters_by_difficulty("Easy")
+    print(f"\nEasy letters to start with: {easy_letters}")
