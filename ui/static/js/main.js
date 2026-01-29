@@ -231,54 +231,68 @@ async function speakText() {
         return;
     }
 
+    // Indicate processing
+    const speakBtn = document.querySelector('.speak-btn');
+    const originalBtnText = speakBtn.innerHTML;
+    speakBtn.innerHTML = `
+        <div class="status-dot pulsing" style="background: white; width: 10px; height: 10px;"></div>
+        <span>Processing...</span>
+    `;
+    speakBtn.disabled = true;
+
     try {
-        // Call grammar correction API
-        const response = await fetch('/api/correct_grammar', {
+        // Use new Sign-to-Speech pipeline (Model + TTS)
+        const response = await fetch('/api/speak', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ text: recognizedText })
+            body: JSON.stringify({
+                text: recognizedText,
+                normalize: true
+            })
         });
 
         const data = await response.json();
 
         if (data.success) {
-            const correctedText = data.corrected;
+            // Update display with normalized text if it changed
+            if (data.normalized_text !== recognizedText) {
+                document.querySelector('.output-text').textContent = data.normalized_text;
+                recognizedText = data.normalized_text;
+            }
 
-            // Update display with corrected text
-            document.querySelector('.output-text').textContent = correctedText;
-            recognizedText = correctedText;
-
-            // Speak corrected text
-            if ('speechSynthesis' in window) {
-                const utterance = new SpeechSynthesisUtterance(correctedText);
-                utterance.rate = 0.9;
-                utterance.pitch = 1;
-                speechSynthesis.speak(utterance);
+            // Note: The server plays the audio (since it's running locally)
+            // But we can also fallback to browser TTS if server TTS fails/is disabled
+            if (!data.spoken) {
+                console.log("Server TTS didn't play, falling back to browser TTS");
+                fallbackSpeak(data.normalized_text || recognizedText);
             }
         } else {
-            // Fallback: speak original text
-            if ('speechSynthesis' in window) {
-                const utterance = new SpeechSynthesisUtterance(recognizedText);
-                utterance.rate = 0.9;
-                utterance.pitch = 1;
-                speechSynthesis.speak(utterance);
-            }
+            console.warn('Server TTS failed:', data.error);
+            fallbackSpeak(recognizedText);
         }
     } catch (error) {
-        console.error('Grammar correction error:', error);
-        // Fallback: speak original text
-        if ('speechSynthesis' in window) {
-            const utterance = new SpeechSynthesisUtterance(recognizedText);
-            utterance.rate = 0.9;
-            utterance.pitch = 1;
-            speechSynthesis.speak(utterance);
-        } else {
-            alert('Text-to-speech not supported in this browser.');
-        }
+        console.error('Speech pipeline error:', error);
+        fallbackSpeak(recognizedText);
+    } finally {
+        // Restore button
+        speakBtn.innerHTML = originalBtnText;
+        speakBtn.disabled = false;
     }
 }
+
+function fallbackSpeak(text) {
+    if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.9;
+        utterance.pitch = 1;
+        speechSynthesis.speak(utterance);
+    } else {
+        alert('Text-to-speech not supported.');
+    }
+}
+
 
 // ============================================
 // Training Progress Simulation

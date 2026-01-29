@@ -24,6 +24,15 @@ from features.hand_landmarks import HandLandmarks
 from data.vocabulary import ID_TO_LETTER, NUM_CLASSES
 from grammar_correction import load_grammar_model, add_grammar_routes
 
+# Import Sign-to-Speech pipeline
+try:
+    from inference.sign2speech_pipeline import Sign2SpeechPipeline
+    PIPELINE_AVAILABLE = True
+except ImportError:
+    print("Warning: Sign-to-Speech pipeline not available")
+    PIPELINE_AVAILABLE = False
+
+
 app = Flask(__name__, 
             static_folder='static',
             template_folder='.')
@@ -32,6 +41,8 @@ app = Flask(__name__,
 model = None
 extractor = None
 device = None
+speech_pipeline = None
+
 
 def load_model():
     """Load the trained model"""
@@ -86,7 +97,27 @@ def load_model():
         print("  - Detection confidence: 0.2 (20%)")
         print("  - Presence confidence: 0.2 (20%)")
         print("  - Tracking confidence: 0.2 (20%)")
+        
+        # Initialize Sign-to-Speech pipeline
+        global speech_pipeline
+        if PIPELINE_AVAILABLE:
+            try:
+                print("\nInitializing Sign-to-Speech Pipeline...")
+                speech_pipeline = Sign2SpeechPipeline(
+                    use_normalizer=True,
+                    use_kokoro=True,
+                    verbose=False  # Reduce verbosity for UI
+                )
+                print("[OK] Sign-to-Speech pipeline loaded!")
+            except Exception as e:
+                print(f"[WARNING] Could not load Sign-to-Speech pipeline: {e}")
+                print("  Continuing without TTS support...")
+                speech_pipeline = None
+        else:
+            print("[INFO] Sign-to-Speech pipeline not available")
+        
         return True
+
         
     except Exception as e:
         print(f"Error loading model: {e}")
@@ -140,14 +171,16 @@ def index():
 @app.route('/api/model/status')
 def model_status():
     """Get model status"""
-    global model, extractor
+    global model, extractor, speech_pipeline
     
     return jsonify({
         'model_loaded': model is not None,
         'extractor_loaded': extractor is not None,
+        'speech_pipeline_loaded': speech_pipeline is not None,
         'device': str(device) if device else 'unknown',
         'num_classes': NUM_CLASSES
     })
+
 
 @app.route('/api/inference', methods=['POST'])
 def inference():
@@ -227,6 +260,78 @@ def inference():
         }), 500
 
 
+@app.route('/api/speak', methods=['POST'])
+def speak_text():
+    """Convert text to speech using Sign-to-Speech pipeline"""
+    global speech_pipeline
+    
+    if speech_pipeline is None:
+        return jsonify({
+            'success': False,
+            'error': 'Speech pipeline not available'
+        }), 503
+    
+    try:
+        data = request.get_json()
+        
+        if 'text' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'No text provided'
+            }), 400
+        
+        text = data['text']
+        use_normalization = data.get('normalize', True)
+        
+        # Process through pipeline (this will speak the text)
+        normalized_text = speech_pipeline.process(
+            text,
+            save_audio=False,
+            return_normalized=True
+        )
+        
+        return jsonify({
+            'success': True,
+            'original_text': text,
+            'normalized_text': normalized_text if use_normalization else text,
+            'spoken': True
+        })
+        
+    except Exception as e:
+        print(f"TTS error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/pipeline/status')
+def pipeline_status():
+    """Get Sign-to-Speech pipeline status"""
+    global speech_pipeline
+    
+    if speech_pipeline is None:
+        return jsonify({
+            'available': False,
+            'normalizer_enabled': False,
+            'tts_engine': None
+        })
+    
+    try:
+        info = speech_pipeline.get_pipeline_info()
+        return jsonify({
+            'available': True,
+            **info
+        })
+    except Exception as e:
+        return jsonify({
+            'available': False,
+            'error': str(e)
+        })
+
+
 @app.route('/api/training/status')
 def training_status():
     """Get current training status with real data"""
@@ -263,21 +368,21 @@ def preprocessing_status():
     """Get preprocessing status"""
     stats_path = os.path.join('..', 'data', 'processed', 'train', 'preprocessing_stats.json')
     if os.path.exists(stats_path):
-        with open(stats_path, 'r') as f:
-            stats = json.load(f)
-            return jsonify({
-                'success': True,
-                'prediction': predicted_letter,
-                'confidence': confidence_score,
-                'top3': top3_predictions,
-                'landmarks': [[lm['x'], lm['y'], lm['z']] for lm in ui_landmarks]
-            })
-        
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'No image provided'
-            }), 400
+        try:
+            with open(stats_path, 'r') as f:
+                stats = json.load(f)
+                return jsonify(stats)
+        except Exception:
+            pass
+            
+    return jsonify({
+        'status': 'not_started',
+        'total_images': 0,
+        'successful': 0,
+        'failed': 0,
+        'success_rate': 0
+    })
+
     
     return jsonify({
         'status': 'not_started',
