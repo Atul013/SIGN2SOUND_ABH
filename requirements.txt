@@ -5,7 +5,7 @@ numpy>=1.24.0
 
 # Deep Learning Frameworks (choose one)
 # tensorflow>=2.13.0  # Uncomment for TensorFlow
-# torch>=2.0.0  # Uncomment for PyTorch
+torch>=2.0.0  # Required for Qwen2.5 SLM
 
 # Data Processing
 pyyaml>=6.0
@@ -15,6 +15,18 @@ Pillow>=10.0.0
 pyttsx3>=2.90
 gtts>=2.3.0
 pygame>=2.5.0  # For gTTS audio playback
+
+# SLM Text Normalization (Qwen2.5-0.5B INT4)
+transformers>=4.35.0
+accelerate>=0.25.0
+bitsandbytes>=0.41.0  # For INT4 quantization
+sentencepiece>=0.1.99  # For tokenization
+
+# Kokoro-TTS (High-Fidelity Neural TTS)
+kokoro-onnx>=0.1.0  # Kokoro-TTS engine
+sounddevice>=0.4.6  # For audio playback
+soundfile>=0.12.1  # For audio file I/O
+scipy>=1.11.0  # Fallback audio processing
 
 # Visualization
 matplotlib>=3.7.0
@@ -30,3 +42,4 @@ kaggle>=1.5.0
 # Optional: Jupyter for experimentation
 # jupyter>=1.0.0
 # ipykernel>=6.25.0
+
