@@ -1,418 +1,261 @@
 """
-Real-Time ASL Alphabet Recognition Demo
-
-This script demonstrates real-time ASL alphabet recognition using webcam input.
-It integrates Developer A's temporal pipeline with Developer B's model and TTS.
+Real-time ASL Alphabet Recognition Demo
+Uses webcam to detect and classify ASL hand signs in real-time
 """
 
-import os
-import sys
 import cv2
-import time
 import numpy as np
+import torch
+import sys
+import os
 from pathlib import Path
-from collections import deque
+import time
 
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from inference.infer import ASLInference
-from inference.tts import TextToSpeech
-from data.vocabulary import ID_TO_LETTER
-
-# Import Developer A's modules
-try:
-    from features.hand_landmarks import extract_hand_landmarks
-    from preprocessing.robustness import apply_temporal_smoothing
-    DEVELOPER_A_AVAILABLE = True
-except ImportError:
-    DEVELOPER_A_AVAILABLE = False
-    print("⚠️  Developer A's modules not available")
+from models.asl_model import create_model
+from features.hand_landmarks import HandLandmarks
+from features.feature_utils import FeatureNormalizer
+from data.vocabulary import ID_TO_LETTER, NUM_CLASSES
 
 
-class RealTimeASLDemo:
-    """
-    Real-time ASL alphabet recognition demo.
-    """
+class ASLRealtimeDemo:
+    """Real-time ASL recognition demo"""
     
-    def __init__(
-        self,
-        model_path: str = "checkpoints/best_model.pth",
-        camera_id: int = 0,
-        confidence_threshold: float = 0.7,
-        enable_tts: bool = True,
-        display_window: bool = True
-    ):
-        """
-        Initialize real-time demo.
+    def __init__(self, model_path, use_cuda=True):
+        self.device = torch.device('cuda' if use_cuda and torch.cuda.is_available() else 'cpu')
+        print(f"Using device: {self.device}")
         
-        Args:
-            model_path: Path to trained model
-            camera_id: Camera device ID
-            confidence_threshold: Minimum confidence for predictions
-            enable_tts: Whether to enable text-to-speech
-            display_window: Whether to display video window
-        """
-        self.model_path = model_path
-        self.camera_id = camera_id
-        self.confidence_threshold = confidence_threshold
-        self.enable_tts = enable_tts
-        self.display_window = display_window
+        # Load model
+        print(f"Loading model from {model_path}...")
+        checkpoint = torch.load(model_path, map_location=self.device, weights_only=False)
         
-        # Initialize inference engine
-        print("Initializing inference engine...")
-        self.inference = ASLInference(
-            model_path=model_path,
-            confidence_threshold=confidence_threshold,
-            temporal_smoothing=True
+        self.model = create_model(
+            model_type='gru',
+            input_dim=63,
+            num_classes=NUM_CLASSES,
+            hidden_size=128,
+            num_layers=2,
+            dropout=0.3
+        )
+        self.model.load_state_dict(checkpoint['model_state_dict'])
+        self.model = self.model.to(self.device)
+        self.model.eval()
+        print(f"Model loaded (Val Acc: {checkpoint['val_accuracy']:.4f})")
+        
+        # Initialize hand landmark extractor
+        print("Initializing MediaPipe Hand Landmarker...")
+        self.extractor = HandLandmarks(
+            model_path='models/hand_landmarker.task',
+            num_hands=1,
+            min_hand_detection_confidence=0.5,
+            min_tracking_confidence=0.5
         )
         
-        # Initialize TTS
-        if self.enable_tts:
-            print("Initializing text-to-speech...")
-            self.tts = TextToSpeech(engine='pyttsx3', rate=150)
-        else:
-            self.tts = None
+        # Prediction smoothing
+        self.prediction_history = []
+        self.history_size = 5
         
-        # Initialize camera
-        print(f"Initializing camera {camera_id}...")
-        self.cap = cv2.VideoCapture(camera_id)
-        
-        if not self.cap.isOpened():
-            raise RuntimeError(f"Failed to open camera {camera_id}")
-        
-        # Set camera properties
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-        self.cap.set(cv2.CAP_PROP_FPS, 30)
-        
-        # State tracking
-        self.current_word = []
-        self.last_letter = None
-        self.last_letter_time = 0
-        self.letter_hold_time = 1.0  # Seconds to hold before adding to word
-        self.word_pause_time = 2.0  # Seconds of no detection to complete word
-        
-        # Frame buffer for temporal processing
-        self.frame_buffer = deque(maxlen=30)
-        
-        # Statistics
-        self.frame_count = 0
-        self.fps = 0
-        self.last_fps_time = time.time()
-        
-        print("✅ Real-time demo initialized!")
+        print("Initialization complete!\n")
     
-    def extract_features(self, frame: np.ndarray) -> np.ndarray:
-        """
-        Extract features from video frame.
+    def preprocess_landmarks(self, landmarks):
+        """Preprocess landmarks for model input"""
+        # Manual wrist-relative normalization
+        # Get wrist position (landmark 0)
+        wrist = landmarks[0]
+        wrist_x, wrist_y, wrist_z = wrist['x'], wrist['y'], wrist['z']
         
-        Args:
-            frame: Video frame (BGR image)
-            
-        Returns:
-            Feature array of shape (1, feature_dim)
-        """
-        if DEVELOPER_A_AVAILABLE:
-            # Use Developer A's landmark extraction
-            landmarks = extract_hand_landmarks(frame)
-            
-            # Convert to feature vector
-            features = self._landmarks_to_features(landmarks)
-        else:
-            # Simulate feature extraction
-            features = np.random.rand(63)
+        # Normalize all landmarks relative to wrist
+        normalized_landmarks = []
+        for lm in landmarks:
+            normalized_landmarks.append({
+                'x': lm['x'] - wrist_x,
+                'y': lm['y'] - wrist_y,
+                'z': lm['z'] - wrist_z
+            })
+        
+        # Convert to numpy array (21 landmarks * 3 coordinates = 63 features)
+        features = np.array([[lm['x'], lm['y'], lm['z']] for lm in normalized_landmarks])
+        features = features.flatten()
+        
+        # Convert to tensor
+        features = torch.FloatTensor(features).unsqueeze(0).unsqueeze(0)  # (1, 1, 63)
         
         return features
     
-    def _landmarks_to_features(self, landmarks: dict) -> np.ndarray:
-        """Convert landmarks to feature vector."""
-        features = []
-        
-        if landmarks and 'hand_landmarks' in landmarks:
-            hand_lms = landmarks['hand_landmarks']
+    def predict(self, features):
+        """Make prediction"""
+        with torch.no_grad():
+            features = features.to(self.device)
+            outputs = self.model(features)
+            probabilities = torch.softmax(outputs, dim=1)
+            confidence, predicted = torch.max(probabilities, 1)
             
-            for i in range(21):
-                if i in hand_lms:
-                    lm = hand_lms[i]
-                    features.extend([lm['x'], lm['y'], lm['z']])
-                else:
-                    features.extend([0.0, 0.0, 0.0])
-        else:
-            # No hand detected
-            features = [0.0] * 63
-        
-        return np.array(features, dtype=np.float32)
+            return predicted.item(), confidence.item()
     
-    def process_frame(self, frame: np.ndarray) -> tuple:
-        """
-        Process a single frame.
+    def smooth_prediction(self, class_id):
+        """Smooth predictions using history"""
+        self.prediction_history.append(class_id)
+        if len(self.prediction_history) > self.history_size:
+            self.prediction_history.pop(0)
         
-        Args:
-            frame: Video frame
-            
-        Returns:
-            Tuple of (predicted_letter, confidence, annotated_frame)
-        """
-        # Extract features
-        features = self.extract_features(frame)
-        
-        # Add to buffer
-        self.frame_buffer.append(features)
-        
-        # Need enough frames for prediction
-        if len(self.frame_buffer) < 10:
-            return None, 0.0, frame
-        
-        # Convert buffer to sequence
-        feature_sequence = np.array(list(self.frame_buffer))
-        
-        # Run inference
-        letter, confidence = self.inference.predict_letter(
-            feature_sequence,
-            return_confidence=True
-        )
-        
-        # Annotate frame
-        annotated_frame = self.annotate_frame(frame, letter, confidence)
-        
-        return letter, confidence, annotated_frame
+        # Return most common prediction
+        if len(self.prediction_history) >= 3:
+            return max(set(self.prediction_history), key=self.prediction_history.count)
+        return class_id
     
-    def annotate_frame(
-        self,
-        frame: np.ndarray,
-        letter: str,
-        confidence: float
-    ) -> np.ndarray:
-        """
-        Annotate frame with predictions and info.
+    def draw_landmarks(self, image, landmarks):
+        """Draw hand landmarks on image"""
+        h, w, _ = image.shape
         
-        Args:
-            frame: Video frame
-            letter: Predicted letter
-            confidence: Prediction confidence
-            
-        Returns:
-            Annotated frame
-        """
-        annotated = frame.copy()
-        h, w = annotated.shape[:2]
-        
-        # Draw prediction
-        if letter:
-            # Large letter display
-            cv2.putText(
-                annotated,
-                letter,
-                (w // 2 - 50, h // 2),
-                cv2.FONT_HERSHEY_BOLD,
-                5,
-                (0, 255, 0),
-                10
-            )
-            
-            # Confidence bar
-            bar_width = int(300 * confidence)
-            cv2.rectangle(
-                annotated,
-                (20, h - 60),
-                (20 + bar_width, h - 40),
-                (0, 255, 0),
-                -1
-            )
-            cv2.rectangle(
-                annotated,
-                (20, h - 60),
-                (320, h - 40),
-                (255, 255, 255),
-                2
-            )
-            
-            # Confidence text
-            cv2.putText(
-                annotated,
-                f"Confidence: {confidence:.2f}",
-                (20, h - 70),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.6,
-                (255, 255, 255),
-                2
-            )
-        
-        # Draw current word
-        word_text = ''.join(self.current_word) if self.current_word else "[No word]"
-        cv2.putText(
-            annotated,
-            f"Word: {word_text}",
-            (20, 40),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            (255, 255, 255),
-            2
-        )
-        
-        # Draw FPS
-        cv2.putText(
-            annotated,
-            f"FPS: {self.fps:.1f}",
-            (w - 150, 40),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.7,
-            (255, 255, 255),
-            2
-        )
-        
-        # Draw instructions
-        instructions = [
-            "Hold letter for 1s to add to word",
-            "Pause 2s to speak word",
-            "Press 'c' to clear word",
-            "Press 'q' to quit"
+        # Draw connections
+        connections = [
+            (0, 1), (1, 2), (2, 3), (3, 4),  # Thumb
+            (0, 5), (5, 6), (6, 7), (7, 8),  # Index
+            (0, 9), (9, 10), (10, 11), (11, 12),  # Middle
+            (0, 13), (13, 14), (14, 15), (15, 16),  # Ring
+            (0, 17), (17, 18), (18, 19), (19, 20),  # Pinky
+            (5, 9), (9, 13), (13, 17)  # Palm
         ]
         
-        for i, instruction in enumerate(instructions):
-            cv2.putText(
-                annotated,
-                instruction,
-                (20, h - 150 + i * 25),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (200, 200, 200),
-                1
-            )
+        for connection in connections:
+            start_idx, end_idx = connection
+            start_point = (int(landmarks[start_idx]['x'] * w), 
+                          int(landmarks[start_idx]['y'] * h))
+            end_point = (int(landmarks[end_idx]['x'] * w), 
+                        int(landmarks[end_idx]['y'] * h))
+            cv2.line(image, start_point, end_point, (0, 255, 0), 2)
         
-        return annotated
+        # Draw landmarks
+        for landmark in landmarks:
+            x = int(landmark['x'] * w)
+            y = int(landmark['y'] * h)
+            cv2.circle(image, (x, y), 5, (0, 0, 255), -1)
+        
+        return image
     
-    def update_word(self, letter: str, confidence: float):
-        """
-        Update current word based on detected letter.
-        
-        Args:
-            letter: Detected letter
-            confidence: Detection confidence
-        """
-        current_time = time.time()
-        
-        if letter and confidence >= self.confidence_threshold:
-            # Same letter as before
-            if letter == self.last_letter:
-                # Check if held long enough
-                if current_time - self.last_letter_time >= self.letter_hold_time:
-                    # Add to word (only once)
-                    if not self.current_word or self.current_word[-1] != letter:
-                        self.current_word.append(letter)
-                        print(f"Added letter: {letter}")
-                        
-                        if self.tts:
-                            self.tts.speak_letter(letter)
-            else:
-                # New letter
-                self.last_letter = letter
-                self.last_letter_time = current_time
-        else:
-            # No detection or low confidence
-            if self.last_letter and current_time - self.last_letter_time >= self.word_pause_time:
-                # Pause detected - speak word
-                if self.current_word:
-                    word = ''.join(self.current_word)
-                    print(f"\n🔊 Speaking word: {word}")
-                    
-                    if self.tts:
-                        self.tts.speak_word(word)
-                    
-                    # Clear word
-                    self.current_word = []
-                
-                self.last_letter = None
-    
-    def run(self):
-        """Run the real-time demo."""
-        print("\n" + "=" * 60)
-        print("Starting Real-Time ASL Alphabet Recognition")
-        print("=" * 60)
-        print("\nInstructions:")
-        print("  - Hold a letter sign for 1 second to add it to the word")
-        print("  - Pause for 2 seconds to speak the word")
-        print("  - Press 'c' to clear the current word")
+    def run(self, camera_id=0):
+        """Run real-time demo"""
+        print("="*70)
+        print("ASL Alphabet Recognition - Real-Time Demo")
+        print("="*70)
+        print("\nControls:")
         print("  - Press 'q' to quit")
-        print("\n" + "=" * 60 + "\n")
+        print("  - Press 's' to save screenshot")
+        print("\nStarting webcam...\n")
         
-        try:
-            while True:
-                # Read frame
-                ret, frame = self.cap.read()
-                
-                if not ret:
-                    print("Failed to read frame")
-                    break
-                
-                # Flip frame horizontally for mirror effect
-                frame = cv2.flip(frame, 1)
-                
-                # Process frame
-                letter, confidence, annotated_frame = self.process_frame(frame)
-                
-                # Update word
-                self.update_word(letter, confidence)
-                
-                # Update FPS
-                self.frame_count += 1
-                if time.time() - self.last_fps_time >= 1.0:
-                    self.fps = self.frame_count / (time.time() - self.last_fps_time)
-                    self.frame_count = 0
-                    self.last_fps_time = time.time()
-                
-                # Display frame
-                if self.display_window:
-                    cv2.imshow('ASL Alphabet Recognition', annotated_frame)
-                    
-                    # Handle keyboard input
-                    key = cv2.waitKey(1) & 0xFF
-                    
-                    if key == ord('q'):
-                        print("\nQuitting...")
-                        break
-                    elif key == ord('c'):
-                        print("\nClearing word...")
-                        self.current_word = []
-                        self.last_letter = None
+        cap = cv2.VideoCapture(camera_id)
         
-        finally:
-            # Cleanup
-            self.cap.release()
-            if self.display_window:
-                cv2.destroyAllWindows()
+        if not cap.isOpened():
+            print("Error: Could not open webcam")
+            return
+        
+        # Set camera properties
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+        
+        fps_time = time.time()
+        fps = 0
+        frame_count = 0
+        
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                print("Error: Could not read frame")
+                break
             
-            print("\n" + "=" * 60)
-            print("Demo ended")
-            print("=" * 60)
+            # Flip frame horizontally for mirror effect
+            frame = cv2.flip(frame, 1)
+            
+            # Convert to RGB for MediaPipe
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            
+            # Extract landmarks
+            detection_result, result = self.extractor.extract_landmarks(rgb_frame)
+            
+            # Process if hand detected
+            if result and len(result) > 0:
+                hand_data = result[0]
+                landmarks = hand_data['landmarks']
+                
+                # Draw landmarks
+                frame = self.draw_landmarks(frame, landmarks)
+                
+                # Preprocess and predict
+                features = self.preprocess_landmarks(landmarks)
+                class_id, confidence = self.predict(features)
+                
+                # Smooth prediction
+                smoothed_class_id = self.smooth_prediction(class_id)
+                predicted_letter = ID_TO_LETTER[smoothed_class_id]
+                
+                # Display prediction
+                text = f"{predicted_letter} ({confidence*100:.1f}%)"
+                cv2.putText(frame, text, (50, 100), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 3)
+                
+                # Display handedness
+                handedness = hand_data.get('handedness', 'Unknown')
+                cv2.putText(frame, f"Hand: {handedness}", (50, 150),
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+            else:
+                # No hand detected
+                cv2.putText(frame, "No hand detected", (50, 100),
+                           cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 3)
+            
+            # Calculate and display FPS
+            frame_count += 1
+            if frame_count % 10 == 0:
+                fps = 10 / (time.time() - fps_time)
+                fps_time = time.time()
+            
+            cv2.putText(frame, f"FPS: {fps:.1f}", (frame.shape[1] - 150, 50),
+                       cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+            
+            # Display device info
+            device_text = "GPU" if self.device.type == 'cuda' else "CPU"
+            cv2.putText(frame, f"Device: {device_text}", (50, 50),
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+            
+            # Show frame
+            cv2.imshow('ASL Alphabet Recognition', frame)
+            
+            # Handle key presses
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord('q'):
+                break
+            elif key == ord('s'):
+                screenshot_path = f"screenshot_{int(time.time())}.png"
+                cv2.imwrite(screenshot_path, frame)
+                print(f"Screenshot saved: {screenshot_path}")
+        
+        cap.release()
+        cv2.destroyAllWindows()
+        print("\nDemo ended.")
 
 
 def main():
-    """Main function."""
-    print("ASL Alphabet Recognition - Real-Time Demo")
-    print("=" * 70)
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='ASL Real-Time Recognition Demo')
+    parser.add_argument('--model', type=str, default='checkpoints/best_model.pth',
+                       help='Path to model checkpoint')
+    parser.add_argument('--camera', type=int, default=0,
+                       help='Camera ID (default: 0)')
+    parser.add_argument('--use-cuda', action='store_true', default=True,
+                       help='Use CUDA if available')
+    args = parser.parse_args()
     
     try:
-        # Create demo
-        demo = RealTimeASLDemo(
-            model_path="checkpoints/best_model.pth",
-            camera_id=0,
-            confidence_threshold=0.7,
-            enable_tts=True,
-            display_window=True
-        )
-        
-        # Run demo
-        demo.run()
-        
+        demo = ASLRealtimeDemo(args.model, use_cuda=args.use_cuda)
+        demo.run(camera_id=args.camera)
+    except KeyboardInterrupt:
+        print("\nInterrupted by user")
     except Exception as e:
-        print(f"\n❌ Error: {e}")
-        print("\nNote: This demo requires:")
-        print("1. Trained model in checkpoints/")
-        print("2. Webcam access")
-        print("3. OpenCV: pip install opencv-python")
-        print("4. TTS engine: pip install pyttsx3")
+        print(f"\nError: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 if __name__ == "__main__":

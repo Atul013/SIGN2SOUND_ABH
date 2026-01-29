@@ -227,7 +227,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '--dataset-dir',
         type=str,
-        default=r'E:\Projects\S2S\ASL\ASL_Alphabet_Dataset',
+        default='ASL_Alphabet_Dataset',
         help='Path to ASL dataset directory'
     )
     parser.add_argument(

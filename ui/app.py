@@ -68,18 +68,26 @@ def inference():
 @app.route('/api/metrics')
 def get_metrics():
     """Get training metrics"""
-    # Try to read from results/metrics.json if available
-    metrics_path = os.path.join('..', 'results', 'metrics.json')
-    if os.path.exists(metrics_path):
-        with open(metrics_path, 'r') as f:
-            return jsonify(json.load(f))
+    # Try to read training history
+    history_path = os.path.join('..', 'results', 'training_history.json')
+    eval_path = os.path.join('..', 'results', 'evaluation_metrics.json')
     
-    return jsonify({
-        'accuracy': 0,
-        'loss': 0,
-        'val_accuracy': 0,
-        'val_loss': 0
-    })
+    metrics = {}
+    
+    if os.path.exists(history_path):
+        with open(history_path, 'r') as f:
+            history = json.load(f)
+            metrics['history'] = history
+            if history.get('val_accuracy'):
+                metrics['best_val_accuracy'] = max(history['val_accuracy'])
+                metrics['final_train_accuracy'] = history['train_accuracy'][-1]
+    
+    if os.path.exists(eval_path):
+        with open(eval_path, 'r') as f:
+            eval_metrics = json.load(f)
+            metrics['evaluation'] = eval_metrics
+    
+    return jsonify(metrics)
 
 @app.route('/api/preprocessing/status')
 def get_preprocessing_status():
