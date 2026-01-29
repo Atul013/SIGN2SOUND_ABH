@@ -57,46 +57,9 @@ def correct_grammar(text):
     if not text or len(text.strip()) == 0:
         return text
     
-    # If model not loaded, return simple corrections
-    if grammar_model is None or grammar_tokenizer is None:
-        return simple_grammar_correction(text)
-    
-    try:
-        # Prepare prompt for grammar correction
-        prompt = f"Correct this sentence to proper English: {text}\nCorrected:"
-        
-        # Tokenize
-        inputs = grammar_tokenizer(prompt, return_tensors="pt", padding=True)
-        device = next(grammar_model.parameters()).device
-        inputs = {k: v.to(device) for k, v in inputs.items()}
-        
-        # Generate
-        with torch.no_grad():
-            outputs = grammar_model.generate(
-                **inputs,
-                max_new_tokens=50,
-                num_return_sequences=1,
-                temperature=0.7,
-                do_sample=True,
-                top_p=0.9,
-                pad_token_id=grammar_tokenizer.pad_token_id
-            )
-        
-        # Decode
-        corrected = grammar_tokenizer.decode(outputs[0], skip_special_tokens=True)
-        
-        # Extract the corrected part (after "Corrected:")
-        if "Corrected:" in corrected:
-            corrected = corrected.split("Corrected:")[-1].strip()
-        
-        # Clean up
-        corrected = corrected.split('\n')[0].strip()  # Take first line
-        
-        return corrected if corrected else simple_grammar_correction(text)
-        
-    except Exception as e:
-        print(f"Error in grammar correction: {e}")
-        return simple_grammar_correction(text)
+    # Use simple rule-based corrections (more reliable than GPT-2 for short text)
+    # GPT-2 tends to generate random continuations instead of corrections
+    return simple_grammar_correction(text)
 
 def simple_grammar_correction(text):
     """
