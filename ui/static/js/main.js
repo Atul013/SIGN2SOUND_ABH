@@ -45,7 +45,7 @@ function initializeAlphabetGrid() {
     const grid = document.getElementById('alphabetGrid');
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
     const specialGestures = ['del', 'spc', 'nil'];
-    
+
     [...letters, ...specialGestures].forEach(letter => {
         const cell = document.createElement('div');
         cell.className = 'letter-cell';
@@ -73,18 +73,18 @@ stopBtn.addEventListener('click', stopWebcam);
 
 async function startWebcam() {
     try {
-        webcamStream = await navigator.mediaDevices.getUserMedia({ 
-            video: { 
-                width: 640, 
-                height: 480 
-            } 
+        webcamStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                width: 640,
+                height: 480
+            }
         });
         webcam.srcObject = webcamStream;
-        
+
         startBtn.disabled = true;
         stopBtn.disabled = false;
         isRecognizing = true;
-        
+
         // Start recognition loop
         recognitionLoop();
     } catch (error) {
@@ -99,7 +99,7 @@ function stopWebcam() {
         webcam.srcObject = null;
         webcamStream = null;
     }
-    
+
     startBtn.disabled = false;
     stopBtn.disabled = true;
     isRecognizing = false;
@@ -107,28 +107,65 @@ function stopWebcam() {
 
 async function recognitionLoop() {
     if (!isRecognizing) return;
-    
-    // Simulate recognition (replace with actual API call)
-    await simulateRecognition();
-    
-    // Continue loop
+
+    // Capture frame and perform real inference
+    await captureAndInfer();
+
+    // Continue loop (10 FPS)
     setTimeout(recognitionLoop, 100);
 }
 
-async function simulateRecognition() {
-    // This would be replaced with actual model inference
-    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const randomLetter = letters[Math.floor(Math.random() * letters.length)];
-    const randomConfidence = (Math.random() * 30 + 70).toFixed(1);
-    
-    // Update UI
-    updatePrediction(randomLetter, randomConfidence);
+async function captureAndInfer() {
+    try {
+        // Create canvas to capture frame
+        const canvas = document.createElement('canvas');
+        canvas.width = webcam.videoWidth;
+        canvas.height = webcam.videoHeight;
+        const ctx = canvas.getContext('2d');
+
+        // Draw current video frame
+        ctx.drawImage(webcam, 0, 0, canvas.width, canvas.height);
+
+        // Convert to base64
+        const imageData = canvas.toDataURL('image/jpeg', 0.8);
+
+        // Send to API for inference
+        const response = await fetch('/api/inference', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ image: imageData })
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.hand_detected) {
+            // Update prediction display
+            updatePrediction(data.prediction, (data.confidence * 100).toFixed(1));
+
+            // Draw landmarks if available
+            if (data.landmarks) {
+                drawLandmarks(data.landmarks);
+            }
+        } else {
+            // No hand detected
+            document.getElementById('predictedLetter').textContent = '-';
+            document.getElementById('confidence').textContent = '0%';
+
+            // Clear landmarks
+            const ctx = overlay.getContext('2d');
+            ctx.clearRect(0, 0, overlay.width, overlay.height);
+        }
+    } catch (error) {
+        console.error('Inference error:', error);
+    }
 }
 
 function updatePrediction(letter, confidence) {
     document.getElementById('predictedLetter').textContent = letter;
     document.getElementById('confidence').textContent = `${confidence}%`;
-    
+
     // Highlight in alphabet grid
     document.querySelectorAll('.letter-cell').forEach(cell => {
         cell.classList.remove('active');
@@ -136,7 +173,7 @@ function updatePrediction(letter, confidence) {
             cell.classList.add('active');
         }
     });
-    
+
     // Add to text output (with debouncing)
     if (confidence > 85) {
         addToText(letter);
@@ -148,7 +185,7 @@ let lastAddedTime = 0;
 
 function addToText(letter) {
     const now = Date.now();
-    
+
     // Debounce: only add if different letter or 1 second has passed
     if (letter !== lastAddedLetter || now - lastAddedTime > 1000) {
         recognizedText += letter;
@@ -187,38 +224,38 @@ function updateTrainingProgress() {
     if (trainingProgress < 100) {
         trainingProgress += Math.random() * 2;
         currentEpoch = Math.floor(trainingProgress / 100 * 100);
-        
+
         // Update UI
         document.getElementById('progressFill').style.width = `${trainingProgress}%`;
         document.getElementById('progressPercent').textContent = `${Math.floor(trainingProgress)}%`;
         document.getElementById('currentEpoch').textContent = `${currentEpoch}/100`;
-        
+
         // Simulate metrics
         const trainAcc = (Math.random() * 10 + 85).toFixed(2);
         const valAcc = (Math.random() * 10 + 80).toFixed(2);
         const trainLoss = (Math.random() * 0.5 + 0.1).toFixed(4);
         const valLoss = (Math.random() * 0.5 + 0.2).toFixed(4);
-        
+
         document.getElementById('trainAcc').textContent = `${trainAcc}%`;
         document.getElementById('valAcc').textContent = `${valAcc}%`;
         document.getElementById('trainLoss').textContent = trainLoss;
         document.getElementById('valLoss').textContent = valLoss;
-        
+
         // Calculate time
         const elapsed = Date.now() - trainingStartTime;
         const elapsedMinutes = Math.floor(elapsed / 60000);
         const elapsedSeconds = Math.floor((elapsed % 60000) / 1000);
         document.getElementById('timeElapsed').textContent = `${elapsedMinutes}m ${elapsedSeconds}s`;
-        
+
         // ETA
         const remaining = (100 - trainingProgress) / trainingProgress * elapsed;
         const etaMinutes = Math.floor(remaining / 60000);
         document.getElementById('eta').textContent = `${etaMinutes}m`;
-        
+
         // Best accuracy
         const bestAcc = Math.max(parseFloat(trainAcc), parseFloat(valAcc)).toFixed(2);
         document.getElementById('bestAcc').textContent = `${bestAcc}%`;
-        
+
         // Update status
         if (trainingProgress < 10) {
             document.getElementById('trainingStatus').textContent = 'Preprocessing';
@@ -233,39 +270,47 @@ function updateTrainingProgress() {
     }
 }
 
-// Update training progress every 2 seconds
-setInterval(updateTrainingProgress, 2000);
-
-// ============================================
-// Real Training Status (via API)
-// ============================================
-
-async function fetchTrainingStatus() {
+// Fetch real metrics on load
+async function fetchRealMetrics() {
     try {
-        const response = await fetch('/api/training/status');
+        const response = await fetch('/api/metrics');
         const data = await response.json();
-        
-        if (data.status === 'running') {
-            document.getElementById('trainingStatus').textContent = data.phase;
-            document.getElementById('progressFill').style.width = `${data.progress}%`;
-            document.getElementById('progressPercent').textContent = `${data.progress}%`;
-            document.getElementById('currentEpoch').textContent = `${data.epoch}/${data.total_epochs}`;
-            document.getElementById('trainAcc').textContent = `${data.train_accuracy}%`;
-            document.getElementById('valAcc').textContent = `${data.val_accuracy}%`;
-            document.getElementById('trainLoss').textContent = data.train_loss;
-            document.getElementById('valLoss').textContent = data.val_loss;
-            document.getElementById('timeElapsed').textContent = data.time_elapsed;
-            document.getElementById('eta').textContent = data.eta;
-            document.getElementById('bestAcc').textContent = `${data.best_accuracy}%`;
+
+        if (data.history) {
+            const history = data.history;
+            const epochs = history.train_accuracy.length;
+            const finalTrainAcc = (history.train_accuracy[epochs - 1] * 100).toFixed(2);
+            const finalValAcc = (history.val_accuracy[epochs - 1] * 100).toFixed(2);
+            const finalTrainLoss = history.train_loss[epochs - 1].toFixed(4);
+            const finalValLoss = history.val_loss[epochs - 1].toFixed(4);
+            const bestValAcc = (Math.max(...history.val_accuracy) * 100).toFixed(2);
+
+            // Update UI with real data
+            document.getElementById('trainingStatus').textContent = 'Complete';
+            document.getElementById('progressFill').style.width = '100%';
+            document.getElementById('progressPercent').textContent = '100%';
+            document.getElementById('currentEpoch').textContent = `${epochs}/${epochs}`;
+            document.getElementById('trainAcc').textContent = `${finalTrainAcc}%`;
+            document.getElementById('valAcc').textContent = `${finalValAcc}%`;
+            document.getElementById('trainLoss').textContent = finalTrainLoss;
+            document.getElementById('valLoss').textContent = finalValLoss;
+            document.getElementById('bestAcc').textContent = `${bestValAcc}%`;
+            document.getElementById('eta').textContent = 'Complete';
+            document.getElementById('timeElapsed').textContent = '~6 minutes';
+
+            // Update status indicator
+            document.querySelector('.status-dot').style.background = '#22c55e';
+
+            // Update stats in hero section
+            document.querySelectorAll('.stat-number')[2].textContent = `${bestValAcc}%`;
         }
     } catch (error) {
-        // If API not available, use simulation
-        console.log('Training API not available, using simulation');
+        console.log('Metrics API not available');
     }
 }
 
-// Try to fetch real training status every 5 seconds
-setInterval(fetchTrainingStatus, 5000);
+// Fetch metrics on load
+fetchRealMetrics();
 
 // ============================================
 // Real-time Inference (via API)
@@ -280,9 +325,9 @@ async function performInference(imageData) {
             },
             body: JSON.stringify({ image: imageData })
         });
-        
+
         const data = await response.json();
-        
+
         if (data.success) {
             updatePrediction(data.prediction, data.confidence * 100);
         }
@@ -298,17 +343,17 @@ async function performInference(imageData) {
 function drawLandmarks(landmarks) {
     const ctx = overlay.getContext('2d');
     ctx.clearRect(0, 0, overlay.width, overlay.height);
-    
+
     // Set canvas size to match video
     overlay.width = webcam.videoWidth;
     overlay.height = webcam.videoHeight;
-    
+
     if (!landmarks || landmarks.length === 0) return;
-    
+
     // Draw connections
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 2;
-    
+
     const connections = [
         [0, 1], [1, 2], [2, 3], [3, 4],  // Thumb
         [0, 5], [5, 6], [6, 7], [7, 8],  // Index
@@ -317,17 +362,17 @@ function drawLandmarks(landmarks) {
         [0, 17], [17, 18], [18, 19], [19, 20],  // Pinky
         [5, 9], [9, 13], [13, 17], [0, 17]  // Palm
     ];
-    
+
     connections.forEach(([start, end]) => {
         const startPoint = landmarks[start];
         const endPoint = landmarks[end];
-        
+
         ctx.beginPath();
         ctx.moveTo(startPoint.x * overlay.width, startPoint.y * overlay.height);
         ctx.lineTo(endPoint.x * overlay.width, endPoint.y * overlay.height);
         ctx.stroke();
     });
-    
+
     // Draw landmarks
     landmarks.forEach(landmark => {
         ctx.fillStyle = '#ffffff';
@@ -357,12 +402,12 @@ document.addEventListener('keydown', (e) => {
             stopWebcam();
         }
     }
-    
+
     // Escape to clear text
     if (e.code === 'Escape') {
         clearText();
     }
-    
+
     // Enter to speak text
     if (e.code === 'Enter' && e.ctrlKey) {
         speakText();
@@ -375,7 +420,7 @@ document.addEventListener('keydown', (e) => {
 
 document.addEventListener('DOMContentLoaded', () => {
     initializeAlphabetGrid();
-    
+
     // Set initial training status
     document.getElementById('trainingStatus').textContent = 'Preprocessing';
     document.getElementById('currentEpoch').textContent = '-';
@@ -386,7 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('timeElapsed').textContent = '-';
     document.getElementById('eta').textContent = '-';
     document.getElementById('bestAcc').textContent = '-';
-    
+
     console.log('Sign2Sound UI initialized');
 });
 
@@ -398,7 +443,7 @@ function formatTime(milliseconds) {
     const seconds = Math.floor(milliseconds / 1000);
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
-    
+
     if (hours > 0) {
         return `${hours}h ${minutes % 60}m`;
     } else if (minutes > 0) {
