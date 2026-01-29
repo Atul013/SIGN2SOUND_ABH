@@ -188,7 +188,23 @@ function addToText(letter) {
 
     // Debounce: only add if different letter or 1 second has passed
     if (letter !== lastAddedLetter || now - lastAddedTime > 1000) {
-        recognizedText += letter;
+        // Handle special gestures
+        if (letter.toLowerCase() === 'space') {
+            // Add actual space instead of the word "space"
+            recognizedText += ' ';
+        } else if (letter.toLowerCase() === 'del') {
+            // Delete last character instead of adding "del"
+            if (recognizedText.length > 0) {
+                recognizedText = recognizedText.slice(0, -1);
+            }
+        } else if (letter.toLowerCase() === 'nothing') {
+            // Do nothing for "nothing" gesture
+            return;
+        } else {
+            // Add normal letter
+            recognizedText += letter;
+        }
+
         document.querySelector('.output-text').textContent = recognizedText;
         lastAddedLetter = letter;
         lastAddedTime = now;
