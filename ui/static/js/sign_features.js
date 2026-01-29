@@ -1,20 +1,11 @@
 
 // ============================================
-// ASL Sign Display & Word Converter
+// Word to Sign Converter (without sign display)
 // ============================================
 
 let currentWord = '';
 let currentLetterIndex = 0;
 let wordLetters = [];
-
-function showSign(letter) {
-    const signImage = document.getElementById('signImage');
-    const signLabel = document.getElementById('signLabel');
-    const imageMap = { 'spc': 'space', 'nil': 'nothing' };
-    const imageName = imageMap[letter] || letter;
-    signImage.src = `static/images/asl_alphabet/${imageName}.jpg`;
-    signLabel.textContent = letter.toUpperCase();
-}
 
 function convertWord() {
     const input = document.getElementById('wordInput');
@@ -32,7 +23,6 @@ function convertWord() {
 function showWordLetter() {
     if (wordLetters.length === 0) return;
     const letter = wordLetters[currentLetterIndex];
-    showSign(letter);
     document.getElementById('letterIndicator').textContent = `${currentLetterIndex + 1}/${wordLetters.length}: ${letter}`;
     document.getElementById('prevBtn').disabled = currentLetterIndex === 0;
     document.getElementById('nextBtn').disabled = currentLetterIndex === wordLetters.length - 1;
@@ -50,7 +40,6 @@ function stopConverter() {
     document.getElementById('prevBtn').disabled = true;
     document.getElementById('nextBtn').disabled = true;
     document.getElementById('stopConverterBtn').disabled = true;
-    showSign('A');
 }
 
 window.convertWord = convertWord;
@@ -58,7 +47,7 @@ window.showPrevSign = showPrevSign;
 window.showNextSign = showNextSign;
 window.stopConverter = stopConverter;
 
-// Update alphabet grid to be clickable
+// Update alphabet grid to be clickable (without showing sign image)
 const originalInitGrid = initializeAlphabetGrid;
 initializeAlphabetGrid = function () {
     const grid = document.getElementById('alphabetGrid');
@@ -70,17 +59,10 @@ initializeAlphabetGrid = function () {
         cell.textContent = letter;
         cell.dataset.letter = letter;
         cell.addEventListener('click', () => {
-            showSign(letter);
+            // Just highlight the cell, no sign display
             document.querySelectorAll('.letter-cell').forEach(c => c.classList.remove('active'));
             cell.classList.add('active');
         });
         grid.appendChild(cell);
     });
-};
-
-// Auto-show sign when detected
-const origUpdate = updatePrediction;
-updatePrediction = function (letter, confidence) {
-    origUpdate(letter, confidence);
-    if (confidence > 70) showSign(letter);
 };

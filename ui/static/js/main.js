@@ -190,7 +190,24 @@ function addToText(letter) {
     if (letter !== lastAddedLetter || now - lastAddedTime > 1000) {
         // Handle special gestures
         if (letter.toLowerCase() === 'space') {
-            // Add actual space instead of the word "space"
+            // Process current word before adding space
+            if (window.NLP && recognizedText.trim().length > 0) {
+                // Get words
+                const words = recognizedText.trim().split(/\s+/);
+                const lastWord = words[words.length - 1];
+
+                // Complete the word using NLP
+                const completed = window.NLP.completeWord(lastWord);
+
+                // Replace last word with completed version
+                words[words.length - 1] = completed;
+                recognizedText = words.join(' ');
+
+                // Speak the completed word naturally
+                window.NLP.speakWord(completed);
+            }
+
+            // Add actual space
             recognizedText += ' ';
         } else if (letter.toLowerCase() === 'del') {
             // Delete last character instead of adding "del"
@@ -216,12 +233,26 @@ function clearText() {
     document.querySelector('.output-text').textContent = '';
 }
 
+
 function speakText() {
     if ('speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance(recognizedText);
-        utterance.rate = 0.9;
-        utterance.pitch = 1;
-        speechSynthesis.speak(utterance);
+        // Use NLP to correct grammar and speak naturally
+        if (window.NLP && recognizedText.trim().length > 0) {
+            const corrected = window.NLP.correctGrammar(recognizedText);
+
+            // Update display with corrected text
+            document.querySelector('.output-text').textContent = corrected;
+            recognizedText = corrected;
+
+            // Speak corrected sentence
+            window.NLP.speakSentence(corrected, true);
+        } else {
+            // Fallback to original
+            const utterance = new SpeechSynthesisUtterance(recognizedText);
+            utterance.rate = 0.9;
+            utterance.pitch = 1;
+            speechSynthesis.speak(utterance);
+        }
     } else {
         alert('Text-to-speech not supported in this browser.');
     }
