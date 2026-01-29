@@ -69,7 +69,9 @@ mlruns/
 *.rar
 *.7z
 datasets/
-data/
+data/raw/
+data/processed/
+data/splits/
 American Sign Language Dataset/
 E:\Projects\S2S\American Sign Language Dataset
 *.csv
@@ -138,12 +140,3 @@ dmypy.json
 
 # Cython
 cython_debug/
-
-__pycache__/
-*.pyc
-.ipynb_checkpoints/
-.vscode/
-.idea/
-venv/
-env/
-*.log

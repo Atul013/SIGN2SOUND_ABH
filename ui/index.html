@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign2Sound - ASL Recognition</title>
+    <link rel="stylesheet" href="static/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                    <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+                <span class="brand-text">Sign2Sound</span>
+            </div>
+            <div class="nav-links">
+                <a href="#home" class="nav-link active">Home</a>
+                <a href="#demo" class="nav-link">Live Demo</a>
+                <a href="#training" class="nav-link">Training</a>
+                <a href="#about" class="nav-link">About</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="hero-content">
+            <div class="hero-badge">Phase 2 - ASL Alphabet Recognition</div>
+            <h1 class="hero-title">
+                Bridging Communication
+                <span class="gradient-text">Through AI</span>
+            </h1>
+            <p class="hero-subtitle">
+                Real-time American Sign Language recognition powered by deep learning.
+                Translating hand gestures into text and speech.
+            </p>
+            <div class="hero-buttons">
+                <button class="btn btn-primary" onclick="scrollToDemo()">
+                    <span>Try Live Demo</span>
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                </button>
+                <button class="btn btn-secondary" onclick="scrollToTraining()">
+                    <span>View Training</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Animated Hand Illustration -->
+        <div class="hero-visual">
+            <div class="hand-container">
+                <svg class="hand-svg" viewBox="0 0 200 200">
+                    <!-- Hand outline -->
+                    <path class="hand-outline" d="M100,150 Q90,140 85,120 L85,80 Q85,70 90,65 Q95,60 100,60 Q105,60 110,65 Q115,70 115,80 L115,120 Q110,140 100,150 Z"/>
+                    <!-- Fingers -->
+                    <circle class="landmark" cx="100" cy="60" r="3"/>
+                    <circle class="landmark" cx="85" cy="80" r="2"/>
+                    <circle class="landmark" cx="115" cy="80" r="2"/>
+                    <circle class="landmark" cx="85" cy="100" r="2"/>
+                    <circle class="landmark" cx="115" cy="100" r="2"/>
+                    <circle class="landmark" cx="85" cy="120" r="2"/>
+                    <circle class="landmark" cx="115" cy="120" r="2"/>
+                    <circle class="landmark" cx="100" cy="150" r="3"/>
+                    <!-- Connection lines -->
+                    <line class="connection" x1="100" y1="60" x2="85" y2="80"/>
+                    <line class="connection" x1="100" y1="60" x2="115" y2="80"/>
+                    <line class="connection" x1="85" y1="80" x2="85" y2="100"/>
+                    <line class="connection" x1="115" y1="80" x2="115" y2="100"/>
+                </svg>
+                <div class="pulse-ring"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats-section">
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-number">29</div>
+                <div class="stat-label">Classes</div>
+                <div class="stat-desc">A-Z + Gestures</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">87K+</div>
+                <div class="stat-label">Training Images</div>
+                <div class="stat-desc">High Quality Dataset</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">95%</div>
+                <div class="stat-label">Accuracy</div>
+                <div class="stat-desc">Target Performance</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">&lt;50ms</div>
+                <div class="stat-label">Inference Time</div>
+                <div class="stat-desc">Real-time Processing</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Live Demo Section -->
+    <section id="demo" class="demo-section">
+        <div class="section-header">
+            <h2 class="section-title">Live Recognition Demo</h2>
+            <p class="section-subtitle">Experience real-time ASL alphabet recognition</p>
+        </div>
+        
+        <div class="demo-container">
+            <div class="video-panel">
+                <div class="video-wrapper">
+                    <video id="webcam" class="webcam-feed" autoplay playsinline></video>
+                    <canvas id="overlay" class="overlay-canvas"></canvas>
+                    <div class="video-status">
+                        <div class="status-dot"></div>
+                        <span>Camera Active</span>
+                    </div>
+                </div>
+                <div class="video-controls">
+                    <button class="control-btn" id="startBtn">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <circle cx="12" cy="12" r="10"/>
+                        </svg>
+                        Start Camera
+                    </button>
+                    <button class="control-btn" id="stopBtn" disabled>
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <rect x="6" y="6" width="12" height="12"/>
+                        </svg>
+                        Stop Camera
+                    </button>
+                </div>
+            </div>
+            
+            <div class="results-panel">
+                <div class="prediction-card">
+                    <div class="card-header">
+                        <h3>Current Prediction</h3>
+                        <div class="confidence-badge">
+                            <span id="confidence">0%</span>
+                        </div>
+                    </div>
+                    <div class="prediction-display">
+                        <div class="predicted-letter" id="predictedLetter">-</div>
+                    </div>
+                </div>
+                
+                <div class="text-output-card">
+                    <div class="card-header">
+                        <h3>Recognized Text</h3>
+                        <button class="icon-btn" onclick="clearText()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="text-output" id="textOutput">
+                        <p class="output-text"></p>
+                    </div>
+                    <button class="speak-btn" onclick="speakText()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M11 5L6 9H2v6h4l5 4V5zM19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/>
+                        </svg>
+                        <span>Speak Text</span>
+                    </button>
+                </div>
+                
+                <div class="alphabet-grid">
+                    <div class="alphabet-header">ASL Alphabet</div>
+                    <div class="letters-grid" id="alphabetGrid">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Training Status Section -->
+    <section id="training" class="training-section">
+        <div class="section-header">
+            <h2 class="section-title">Training Progress</h2>
+            <p class="section-subtitle">Monitor model training in real-time</p>
+        </div>
+        
+        <div class="training-container">
+            <div class="training-card">
+                <div class="card-header">
+                    <h3>Current Status</h3>
+                    <div class="status-indicator">
+                        <div class="status-dot pulsing"></div>
+                        <span id="trainingStatus">Preprocessing</span>
+                    </div>
+                </div>
+                <div class="progress-info">
+                    <div class="progress-label">
+                        <span>Overall Progress</span>
+                        <span id="progressPercent">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                    </div>
+                    <div class="progress-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Current Epoch:</span>
+                            <span class="detail-value" id="currentEpoch">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Training Accuracy:</span>
+                            <span class="detail-value" id="trainAcc">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Validation Accuracy:</span>
+                            <span class="detail-value" id="valAcc">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Time Elapsed:</span>
+                            <span class="detail-value" id="timeElapsed">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                        </svg>
+                    </div>
+                    <div class="metric-content">
+                        <div class="metric-label">Training Loss</div>
+                        <div class="metric-value" id="trainLoss">-</div>
+                    </div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="metric-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+                        </svg>
+                    </div>
+                    <div class="metric-content">
+                        <div class="metric-label">Validation Loss</div>
+                        <div class="metric-value" id="valLoss">-</div>
+                    </div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="metric-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 6v6l4 2"/>
+                        </svg>
+                    </div>
+                    <div class="metric-content">
+                        <div class="metric-label">ETA</div>
+                        <div class="metric-value" id="eta">-</div>
+                    </div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="metric-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M3 3h18v18H3zM9 9h6v6H9z"/>
+                        </svg>
+                    </div>
+                    <div class="metric-content">
+                        <div class="metric-label">Best Accuracy</div>
+                        <div class="metric-value" id="bestAcc">-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="about-section">
+        <div class="section-header">
+            <h2 class="section-title">About Sign2Sound</h2>
+            <p class="section-subtitle">Empowering communication through technology</p>
+        </div>
+        
+        <div class="about-content">
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                            <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+                        </svg>
+                    </div>
+                    <h3>Deep Learning</h3>
+                    <p>Powered by GRU neural networks for accurate temporal sequence modeling</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                        </svg>
+                    </div>
+                    <h3>Real-time Processing</h3>
+                    <p>Sub-50ms inference time enables seamless real-time recognition</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m5.08 5.08l4.24 4.24M1 12h6m6 0h6M4.22 19.78l4.24-4.24m5.08-5.08l4.24-4.24"/>
+                        </svg>
+                    </div>
+                    <h3>MediaPipe Integration</h3>
+                    <p>Robust hand landmark detection using Google's MediaPipe framework</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M11 5L6 9H2v6h4l5 4V5zM19.07 4.93a10 10 0 010 14.14"/>
+                        </svg>
+                    </div>
+                    <h3>Text-to-Speech</h3>
+                    <p>Converts recognized signs to natural-sounding speech output</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <svg class="footer-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                    <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+                <span>Sign2Sound</span>
+            </div>
+            <div class="footer-text">
+                <p>Phase 2 - ASL Alphabet Recognition</p>
+                <p class="copyright">© 2026 Sign2Sound Team. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="static/js/main.js"></script>
+</body>
+</html>
