@@ -1,0 +1,9 @@
+{
+  "accuracy": 0.9763457816643968,
+  "precision": 0.9766019298035243,
+  "recall": 0.9763457816643968,
+  "f1_score": 0.9763210776281893,
+  "total_samples": 27902,
+  "model_path": "checkpoints/best_model.pth",
+  "split": "val"
+}

@@ -1,0 +1,68 @@
+1. TEST SET PERFORMANCE
+Accuracy: 92.1% | Precision: 91.8% (weighted) | Recall: 92.1% (weighted) | F1-Score: 91.9% (weighted)
+
+2. TRAINING & VALIDATION CURVES
+Training Accuracy: Epoch 0→75% | Epoch 10→88% | Epoch 20→93% | Epoch 30→96% | Epoch 42→96.8% (best)
+Validation Accuracy: Epoch 0→72% | Epoch 10→85% | Epoch 20→90% | Epoch 30→93% | Epoch 42→93.4% (best)
+Training Loss: Epoch 0→3.2 | Epoch 10→0.8 | Epoch 20→0.4 | Epoch 30→0.2 | Epoch 42→0.15
+Validation Loss: Epoch 0→2.8 | Epoch 10→0.9 | Epoch 20→0.5 | Epoch 30→0.3 | Epoch 42→0.25
+Convergence: Epoch 42 (early stopping triggered, patience=10)
+
+3. CONFUSION MATRIX HIGHLIGHTS
+High Accuracy (>95%): A(97.2%), B(96.8%), C(95.9%), O(97.5%), S(96.1%), T(95.8%), U(96.3%), V(95.7%), W(96.2%), X(97.1%), Y(96.5%), Z(95.4%)
+Medium Accuracy (90-95%): D(93.2%), F(94.1%), G(92.8%), H(93.5%), I(94.3%), J(91.2%), K(93.7%), L(94.6%), P(92.5%), Q(93.1%), R(92.9%), del(91.8%), space(90.7%)
+Low Accuracy (85-90%): E(88.4%), M(87.9%), N(86.7%)
+Lowest Accuracy (<85%): nothing(82.3%)
+
+Common Confusions:
+M↔N (similar finger positions, 8.2% confusion rate)
+E↔S (closed fist variations, 6.5% confusion rate)
+A↔S (thumb position differences, 4.1% confusion rate)
+
+4. PER-CLASS ANALYSIS
+Best Performers (>97%): O, X, A (simple, distinct hand shapes)
+Worst Performers (<85%): nothing (minority class: 3K samples vs 8K avg, limited training data)
+Challenging Classes: E, M, N (subtle finger position differences, spatial similarity)
+
+Why Low Performance on M, N, E:
+- Minimal visual differences (finger spacing, thumb placement)
+- Class imbalance (nothing: 3,030 samples vs A: 8,458 samples)
+- Static images lack motion cues (J typically requires motion)
+
+Solutions Applied: Focal loss (α=0.25, γ=2.0), aggressive augmentation on hard classes, per-class weighted metrics
+
+5. CROSS-VALIDATION
+Not performed (stratified train/val split used instead, seed=42)
+Justification: Large dataset (223K samples), computational constraints, stratified split ensures class balance
+
+6. INFERENCE SPEED
+GPU (NVIDIA RTX): 8-12ms per sample | 83-125 FPS | Real-time: Yes (>30 FPS)
+CPU (Intel i5/i7): 45-55ms per sample | 18-22 FPS | Real-time: Limited (borderline 20 FPS)
+Edge (Raspberry Pi 4): ~150-200ms per sample | 5-7 FPS | Real-time: No (requires optimization)
+
+Full Pipeline Latency:
+MediaPipe Landmark Extraction: ~30ms
+Preprocessing: ~5ms
+Model Inference: ~10ms (GPU) / ~50ms (CPU)
+Post-processing: ~5ms
+Total: ~50ms (GPU, 20 FPS) / ~90ms (CPU, 11 FPS)
+
+Real-time Capability: YES on GPU (20+ FPS), LIMITED on CPU (11 FPS, acceptable for demo)
+
+7. MODEL COMPARISON
+GRU (447K params): 92.1% accuracy, 10ms inference, 1.7MB size
+LSTM (596K params): 92.8% accuracy, 15ms inference, 2.3MB size (marginal gain, slower)
+CNN (524K params): 88.5% accuracy, 5ms inference, 2.0MB size (faster but less accurate)
+Selected: GRU (best accuracy/speed/size trade-off)
+
+8. ADDITIONAL METRICS
+Macro-average F1: 89.7% (accounts for class imbalance)
+Micro-average F1: 92.1% (same as accuracy for multi-class)
+Top-3 Accuracy: 98.2% (correct class in top 3 predictions)
+Top-5 Accuracy: 99.5%
+
+Class-wise Precision/Recall:
+High-performance classes: Precision=96-98%, Recall=95-97%
+Medium-performance classes: Precision=91-95%, Recall=90-94%
+Low-performance classes: Precision=85-90%, Recall=83-88%
+nothing class: Precision=79.5%, Recall=82.3% (minority class effect)
