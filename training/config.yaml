@@ -4,7 +4,7 @@
 model:
   type: "gru"  # Options: "cnn", "gru", "lstm"
   input_dim: 63  # 21 landmarks * 3 (x, y, z)
-  num_classes: 26  # A-Z
+  num_classes: 29  # A-Z + del, nothing, space
   
   # Model-specific parameters
   gru:

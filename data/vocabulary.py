@@ -10,17 +10,21 @@ much more versatile than a limited word-based vocabulary.
 
 import string
 
-# ASL Alphabet: A-Z (26 letters)
+# ASL Alphabet: A-Z (26 letters) + special gestures
 LETTERS = list(string.ascii_uppercase)
+SPECIAL_GESTURES = ['del', 'nothing', 'space']
+ALL_CLASSES = LETTERS + SPECIAL_GESTURES
 
-# Letter to ID mapping (A=0, B=1, ..., Z=25)
-LETTER_TO_ID = {letter: idx for idx, letter in enumerate(LETTERS)}
+# Letter to ID mapping (A=0, B=1, ..., Z=25, del=26, nothing=27, space=28)
+LETTER_TO_ID = {letter: idx for idx, letter in enumerate(ALL_CLASSES)}
+# Add lowercase versions for special gestures
+LETTER_TO_ID.update({gesture.lower(): LETTER_TO_ID[gesture] for gesture in SPECIAL_GESTURES if gesture in LETTER_TO_ID})
 
 # ID to letter mapping (reverse lookup)
-ID_TO_LETTER = {idx: letter for letter, idx in LETTER_TO_ID.items()}
+ID_TO_LETTER = {idx: letter for letter, idx in LETTER_TO_ID.items() if letter.isupper() or letter in SPECIAL_GESTURES}
 
-# Number of classes
-NUM_CLASSES = 26
+# Number of classes (26 letters + 3 special gestures)
+NUM_CLASSES = 29
 
 # Letter groups (for organization and learning)
 LETTER_GROUPS = {
