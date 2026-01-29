@@ -64,20 +64,27 @@ def load_model():
         
         print(f"Model loaded successfully (Val Acc: {checkpoint['val_accuracy']:.4f})")
         
-        # Initialize MediaPipe hand landmarker
+        
+        # Initialize MediaPipe hand landmarker with optimized settings
         landmarker_path = os.path.join('..', 'models', 'hand_landmarker.task')
         if not os.path.exists(landmarker_path):
             print(f"Warning: Hand landmarker not found at {landmarker_path}")
             return False
         
+        # Lower confidence thresholds for better detection
+        # Especially important in varying lighting conditions
         extractor = HandLandmarks(
             model_path=landmarker_path,
             num_hands=1,
-            min_hand_detection_confidence=0.3,
-            min_tracking_confidence=0.3
+            min_hand_detection_confidence=0.2,      # Lowered from 0.3 to 0.2
+            min_hand_presence_confidence=0.2,       # Added this parameter
+            min_tracking_confidence=0.2             # Lowered from 0.3 to 0.2
         )
         
-        print("MediaPipe Hand Landmarker initialized")
+        print("MediaPipe Hand Landmarker initialized with optimized settings")
+        print("  - Detection confidence: 0.2 (20%)")
+        print("  - Presence confidence: 0.2 (20%)")
+        print("  - Tracking confidence: 0.2 (20%)")
         return True
         
     except Exception as e:
