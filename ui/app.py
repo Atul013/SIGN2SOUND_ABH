@@ -297,18 +297,9 @@ if __name__ == '__main__':
     else:
         print("[ERROR] Failed to load ASL model. Inference will not work.")
     
-    # Load grammar correction model (optional)
-    print("\nLoading grammar correction model...")
-    try:
-        if load_grammar_model():
-            print("[OK] Grammar model loaded successfully!")
-            # Add grammar correction routes
-            add_grammar_routes(app)
-        else:
-            print("[WARN] Grammar model not loaded. Using fallback corrections.")
-    except Exception as e:
-        print(f"[WARN] Grammar model loading failed: {e}")
-        print("[INFO] Will use simple rule-based corrections instead.")
+    # Skip loading heavy grammar model - use fast rule-based corrections instead
+    print("\n[INFO] Using fast rule-based grammar corrections (no model loading)")
+    add_grammar_routes(app)
     
     print("\nStarting server...")
     print("Open your browser and navigate to: http://localhost:5000")

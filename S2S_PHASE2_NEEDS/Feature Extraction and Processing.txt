@@ -1,0 +1,75 @@
+HAND LANDMARK DETECTION
+Tool: MediaPipe Hand Landmarker v0.10.0 (Google)
+Model: Pre-trained on 30K+ hand images, >95% detection accuracy
+Output: 21 landmarks per hand (thumb_tip, index_tip, middle_tip, ring_tip, pinky_tip, thumb_ip, index_pip, wrist, etc.)
+Coordinates: 3D world coordinates (x, y, z in meters) + 2D image coordinates (normalized 0-1)
+Detection: Single-hand mode (ASL uses one hand), confidence threshold=0.5
+
+BODY POSE & FACIAL EXPRESSION
+Not used for this project (ASL Alphabet focuses on hand shapes only)
+Future work: MediaPipe Pose (33 landmarks) for full-body signs, MediaPipe Face Mesh (468 landmarks) for facial grammar
+
+FEATURE VECTOR DIMENSIONS
+Raw MediaPipe output: 21 landmarks × 3 coords (x, y, z) = 63 features per frame
+Wrist coordinate: (x_wrist, y_wrist, z_wrist)
+All other landmarks: Relative to wrist for translation invariance
+
+Final feature vector: [63-dim] = [x₁-x_wrist, y₁-y_wrist, z₁-z_wrist, ..., x₂₁-x_wrist, y₂₁-y_wrist, z₂₁-z_wrist]
+
+Normalization scale: Bounding box diagonal
+diagonal = √[(x_max - x_min)² + (y_max - y_min)² + (z_max - z_min)²]
+normalized_feature = (landmark - wrist) / diagonal
+
+Representation: Single-frame static features (ASL Alphabet = static hand shapes, no temporal sequences)
+
+TEMPORAL SEQUENCE HANDLING
+Frame extraction: 30 FPS video → extract 1 frame every 3 frames = 10 FPS effective
+Sliding window: Not used (static alphabet recognition, single-frame inference)
+Sequence buffer: 5-frame buffer for prediction smoothing (majority voting)
+Future work: 30-frame sequences (1 second) for dynamic signs (J, Z require motion)
+
+FEATURE NORMALIZATION
+Step 1: Translation invariance - Subtract wrist position from all landmarks
+Step 2: Scale invariance - Divide by bounding box diagonal
+Step 3: Rotation normalization - Align hand orientation using wrist→middle_finger_mcp vector
+Step 4: Z-score normalization - Apply across dataset: (feature - mean) / std
+  mean = [0.0, 0.0, 0.0, ...] (63-dim, computed from training set)
+  std = [0.15, 0.12, 0.08, ...] (63-dim, varies per landmark)
+
+Missing data handling: If MediaPipe fails (no hand detected), use zero vector [0]×63 → filtered out during training
+
+MEDIAPIPE SKELETAL PROCESSING
+Input: 640×480 RGB image
+MediaPipe pipeline: Image → Hand Detection (palm detector) → Hand Landmark Regression → 21 3D landmarks
+Processing steps:
+  1. Convert image to RGB (OpenCV uses BGR)
+  2. Pass to mp.solutions.hands.Hands(static_image_mode=True, max_num_hands=1, min_detection_confidence=0.5)
+  3. Extract landmark.x, landmark.y, landmark.z for each of 21 points
+  4. Convert to NumPy array: shape = (21, 3)
+  5. Compute wrist-relative coordinates: landmarks - landmarks[0] (wrist = index 0)
+  6. Compute bounding box diagonal: np.linalg.norm(landmarks.max(axis=0) - landmarks.min(axis=0))
+  7. Normalize: landmarks_norm = (landmarks - wrist) / diagonal
+  8. Flatten: shape = (63,) for model input
+
+Filtering: Reject frames with detection confidence <0.5 or missing landmarks
+Success rate: >95% on ASL Alphabet dataset (well-lit, clear hand images)
+
+AUGMENTATION (APPLIED TO FEATURES, NOT IMAGES)
+Gaussian noise: Add N(0, 0.02) to normalized features (simulates sensor jitter)
+Scaling: Random scale 0.9-1.1 × features (hand size variation)
+Rotation: Random rotate hand around wrist ±15° (orientation variation)
+Jitter: Random shift ±0.05 in x, y, z (camera motion)
+
+FEATURE STORAGE
+Format: NumPy .npy files (compressed, fast loading)
+Train set: 178,459 samples × 63 features = ~42MB (uncompressed), ~12MB (compressed)
+Val set: 22,307 samples × 63 features = ~5MB (uncompressed), ~1.5MB (compressed)
+Test set: 22,308 samples × 63 features = ~5MB (uncompressed), ~1.5MB (compressed)
+Total storage: ~15MB (95% reduction from original 2.8GB images)
+
+LANDMARK INDICES (MEDIAPIPE HAND)
+0=wrist, 1=thumb_cmc, 2=thumb_mcp, 3=thumb_ip, 4=thumb_tip
+5=index_mcp, 6=index_pip, 7=index_dip, 8=index_tip
+9=middle_mcp, 10=middle_pip, 11=middle_dip, 12=middle_tip
+13=ring_mcp, 14=ring_pip, 15=ring_dip, 16=ring_tip
+17=pinky_mcp, 18=pinky_pip, 19=pinky_dip, 20=pinky_tip

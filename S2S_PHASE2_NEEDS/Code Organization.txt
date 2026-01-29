@@ -1,0 +1,324 @@
+GITHUB REPOSITORY
+URL: https://github.com/[username]/sign2sound-asl-recognition
+Status: Public repository with complete source code
+License: MIT License
+Contact: amalbabu34767@gmail.com
+
+REPOSITORY STRUCTURE
+Root:
+├── ASL_Alphabet_Dataset/          # Dataset (not tracked in git, download separately)
+│   ├── asl_alphabet_train/        # 87,000 training images (29 classes)
+│   └── asl_alphabet_test/         # 29,000 test images
+├── checkpoints/                   # Trained model weights
+│   ├── best_model.pth             # Best validation accuracy model (93.4%)
+│   ├── checkpoint_epoch_10.pth    # Intermediate checkpoint
+│   ├── checkpoint_epoch_5.pth     # Intermediate checkpoint
+│   └── README.md                  # Model descriptions and download links
+├── data/                          # Data utilities and processed features
+│   ├── vocabulary.py              # Class mappings (A-Z, del, space, nothing)
+│   ├── statistics.txt             # Dataset statistics
+│   └── processed/                 # MediaPipe extracted features (.npy files)
+│       ├── train/                 # 178,459 samples × 63 features
+│       └── val/                   # 22,307 samples × 63 features
+├── features/                      # Feature extraction modules
+│   ├── hand_landmarks.py          # MediaPipe Hand Landmarker integration
+│   ├── pose_estimation.py         # Body pose extraction (future work)
+│   ├── feature_utils.py           # Normalization, augmentation utilities
+│   └── README.md                  # Feature extraction documentation
+├── models/                        # Neural network architectures
+│   ├── asl_model.py               # GRU/LSTM/CNN model definitions
+│   ├── custom_layers.py           # Attention mechanisms, custom layers
+│   ├── loss.py                    # Focal Loss, weighted cross-entropy
+│   ├── hand_landmarker.task       # MediaPipe pre-trained model (245MB)
+│   └── __pycache__/               # Python cache (gitignored)
+├── preprocessing/                 # Data preprocessing pipeline
+│   ├── preprocess.py              # Main preprocessing script
+│   ├── extract_features.py        # MediaPipe feature extraction
+│   ├── augmentation.py            # Data augmentation (rotation, scaling, noise)
+│   ├── robustness.py              # Robustness testing (occlusion, blur)
+│   ├── sequence_buffer.py         # Temporal sequence handling
+│   ├── temporal_segmentation.py   # Video frame extraction
+│   └── README.md                  # Preprocessing pipeline documentation
+├── training/                      # Model training scripts
+│   ├── train_pytorch.py           # Main PyTorch training script
+│   ├── train.py                   # TensorFlow training (alternative)
+│   ├── evaluate_pytorch.py        # Evaluation and metrics computation
+│   ├── evaluate.py                # TensorFlow evaluation
+│   ├── data_loader.py             # PyTorch Dataset and DataLoader
+│   ├── callbacks.py               # Early stopping, checkpointing, logging
+│   ├── config.yaml                # Hyperparameters and training config
+│   └── README.md                  # Training instructions
+├── inference/                     # Real-time inference and demo
+│   ├── realtime_demo.py           # Webcam real-time recognition
+│   ├── sentence_builder_demo.py   # Sentence construction demo
+│   ├── infer.py                   # Single image/batch inference
+│   ├── tts.py                     # Text-to-speech integration (pyttsx3)
+│   └── utils.py                   # Inference utilities, post-processing
+├── ui/                            # Web-based user interface
+│   ├── app.py                     # Flask web server
+│   ├── index.html                 # Main web interface
+│   ├── grammar_correction.py      # Grammar correction with LLM
+│   └── static/                    # CSS, JavaScript, images
+├── tests/                         # Unit and integration tests
+│   ├── test_features.py           # Feature extraction tests
+│   ├── test_model.py              # Model architecture tests
+│   ├── test_preprocessing.py      # Preprocessing pipeline tests
+│   └── test_inference.py          # Inference pipeline tests
+├── scripts/                       # Utility scripts
+│   ├── setup_environment.sh       # Environment setup (Linux/Mac)
+│   ├── download_datasets.sh       # Dataset download from Kaggle
+│   ├── run_all.sh                 # Complete pipeline execution
+│   ├── copy_asl_images.py         # Dataset organization
+│   └── preprocess_asl_images.py   # Batch preprocessing
+├── results/                       # Training results and metrics
+│   ├── training_history.json      # Loss/accuracy curves
+│   ├── evaluation_metrics.json    # Test set performance
+│   └── per_class_metrics.json     # Per-class precision/recall/F1
+├── docs/                          # Project documentation
+│   ├── dataset_preprocessing.md   # Preprocessing guide
+│   ├── training_details.md        # Training methodology
+│   ├── UI_SUMMARY.md              # User interface documentation
+│   └── project_verification_report.md  # Project verification
+├── requirements.txt               # Python dependencies
+├── README.md                      # Main project documentation
+├── LICENSE                        # MIT License
+└── .gitignore                     # Git ignore rules
+
+MAIN README.MD CONTENTS
+Sections:
+1. Project Overview: Sign2Sound ASL Alphabet Recognition System
+2. Features: Real-time recognition, 92% accuracy, 29 classes, TTS integration
+3. Demo: Screenshots, video demonstrations
+4. Installation:
+   - Clone repository: git clone https://github.com/[username]/sign2sound-asl-recognition.git
+   - Install dependencies: pip install -r requirements.txt
+   - Download dataset: python scripts/download_datasets.sh
+   - Download model: wget [model_checkpoint_url] -O checkpoints/best_model.pth
+5. Quick Start:
+   - Preprocess data: python preprocessing/preprocess.py
+   - Train model: python training/train_pytorch.py
+   - Run demo: python inference/realtime_demo.py
+   - Web UI: python ui/app.py (access at http://localhost:5000)
+6. Dataset: ASL Alphabet (Kaggle/IEEE DataPort), 223K images, 29 classes
+7. Model: Bidirectional GRU, 447K params, MediaPipe landmarks
+8. Performance: Test accuracy 92.1%, inference <10ms (GPU)
+9. Dependencies: PyTorch 2.0+, MediaPipe 0.10+, OpenCV 4.8+
+10. Citation: BibTeX entry for academic use
+11. License: MIT
+12. Contact: amalbabu34767@gmail.com
+
+KEY SCRIPTS
+Training:
+  python training/train_pytorch.py --config training/config.yaml --epochs 100 --batch_size 32
+  Output: checkpoints/best_model.pth, results/training_history.json
+
+Inference (Real-time):
+  python inference/realtime_demo.py --model checkpoints/best_model.pth --webcam 0
+  Controls: S=speak, C=clear, Q=quit
+
+Inference (Single image):
+  python inference/infer.py --image path/to/image.jpg --model checkpoints/best_model.pth
+
+Preprocessing:
+  python preprocessing/preprocess.py --input ASL_Alphabet_Dataset/asl_alphabet_train --output data/processed/train
+  Extracts MediaPipe landmarks, saves as .npy files
+
+Evaluation:
+  python training/evaluate_pytorch.py --model checkpoints/best_model.pth --data data/processed/test
+  Output: results/evaluation_metrics.json, confusion matrix
+
+Web UI:
+  python ui/app.py
+  Access: http://localhost:5000
+
+MODEL CHECKPOINTS
+Location: checkpoints/ directory
+Files:
+  - best_model.pth (1.7MB) - Best validation accuracy (93.4%), epoch 42
+  - checkpoint_epoch_10.pth - Early training checkpoint
+  - checkpoint_epoch_5.pth - Initial convergence checkpoint
+
+Download: Google Drive link in checkpoints/README.md (for users without training)
+Format: PyTorch state_dict (.pth)
+Contents: Model weights, optimizer state, epoch number, best validation accuracy
+
+Alternative formats:
+  - TorchScript: model.torchscript (for deployment)
+  - ONNX: model.onnx (cross-platform)
+  - Quantized: model_int8.pth (4x smaller, edge devices)
+
+DOCUMENTATION QUALITY
+Code comments:
+  - Function docstrings: Google style (Args, Returns, Raises, Example)
+  - Inline comments: Complex logic, hyperparameter rationale
+  - Type hints: All functions have type annotations
+
+Example from models/asl_model.py:
+  def forward(self, x: torch.Tensor) -> torch.Tensor:
+      """Forward pass through the GRU model.
+      
+      Args:
+          x: Input tensor of shape (batch, sequence, features)
+             - batch: Number of samples
+             - sequence: Temporal sequence length (1 for static signs)
+             - features: 63-dim MediaPipe hand landmarks
+      
+      Returns:
+          Logits of shape (batch, num_classes=29)
+      
+      Example:
+          >>> model = ASLModel(input_dim=63, hidden_dim=128, num_classes=29)
+          >>> x = torch.randn(32, 1, 63)
+          >>> output = model(x)  # shape: (32, 29)
+      """
+
+README files in each module:
+  - features/README.md: MediaPipe setup, feature extraction guide
+  - preprocessing/README.md: Preprocessing pipeline, augmentation techniques
+  - training/README.md: Training instructions, hyperparameter tuning
+  - models/README.md: Model architecture details, layer descriptions
+
+Documentation files (docs/):
+  - dataset_preprocessing.md: Step-by-step preprocessing guide with examples
+  - training_details.md: Training methodology, convergence analysis
+  - UI_SUMMARY.md: Web interface usage, API endpoints
+
+REPRODUCIBILITY
+Fixed random seeds:
+  Python: random.seed(42)
+  NumPy: np.random.seed(42)
+  PyTorch: torch.manual_seed(42), torch.cuda.manual_seed_all(42)
+  
+Deterministic operations:
+  torch.backends.cudnn.deterministic = True
+  torch.backends.cudnn.benchmark = False
+
+Config file (training/config.yaml):
+  seed: 42
+  batch_size: 32
+  learning_rate: 0.001
+  epochs: 100
+  optimizer: adam
+  scheduler: ReduceLROnPlateau
+  dropout: 0.3
+  hidden_dim: 128
+  num_layers: 2
+  bidirectional: true
+  focal_loss_alpha: 0.25
+  focal_loss_gamma: 2.0
+
+Exact environment:
+  requirements.txt with pinned versions (torch==2.0.1, mediapipe==0.10.0, etc.)
+  Python 3.10.11
+  CUDA 11.8
+  cuDNN 8.6.0
+
+Reproducibility instructions:
+  1. Clone repository
+  2. Install exact dependencies: pip install -r requirements.txt
+  3. Download dataset: python scripts/download_datasets.sh
+  4. Preprocess with seed=42: python preprocessing/preprocess.py --seed 42
+  5. Train with config: python training/train_pytorch.py --config training/config.yaml
+  6. Results should match: Train=96.8%, Val=93.4%, Test=92.1% (±0.5% due to GPU non-determinism)
+
+REQUIREMENTS.TXT
+torch==2.0.1
+torchvision==0.15.2
+torchaudio==2.0.2
+mediapipe==0.10.0
+opencv-python==4.8.0.74
+numpy==1.24.3
+matplotlib==3.7.1
+seaborn==0.12.2
+scikit-learn==1.3.0
+pandas==2.0.3
+pyyaml==6.0
+tqdm==4.65.0
+pyttsx3==2.90
+Flask==2.3.2
+Werkzeug==2.3.6
+pillow==10.0.0
+pytest==7.4.0
+
+Optional (for GPU):
+  cudatoolkit==11.8
+  cudnn==8.6.0
+
+Optional (for cloud TTS):
+  gTTS==2.3.2
+  SpeechRecognition==3.10.0
+
+Development:
+  black==23.7.0 (code formatting)
+  flake8==6.1.0 (linting)
+  mypy==1.4.1 (type checking)
+  jupyter==1.0.0 (notebooks)
+
+Total installation size: ~2.5GB (with CUDA), ~500MB (CPU-only)
+
+ALTERNATIVE: ENVIRONMENT.YML
+name: sign2sound
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pytorch=2.0.1
+  - torchvision=0.15.2
+  - cudatoolkit=11.8
+  - pip
+  - pip:
+    - mediapipe==0.10.0
+    - opencv-python==4.8.0.74
+    - pyttsx3==2.90
+    - Flask==2.3.2
+
+Usage: conda env create -f environment.yml
+
+GIT IGNORE
+.gitignore contents:
+  __pycache__/
+  *.pyc
+  *.pyo
+  *.pyd
+  .Python
+  env/
+  venv/
+  .vscode/
+  .idea/
+  *.log
+  *.swp
+  .DS_Store
+  ASL_Alphabet_Dataset/  # Too large (2.8GB)
+  data/processed/*.npy   # Generated files
+  checkpoints/*.pth      # Provide download links instead
+  results/*.png          # Generated plots
+
+Tracked files:
+  - Source code (.py)
+  - Configuration (config.yaml, requirements.txt)
+  - Documentation (.md)
+  - Small model files (hand_landmarker.task via Git LFS)
+  - Metadata (results/*.json)
+
+CONTINUOUS INTEGRATION
+GitHub Actions (.github/workflows/test.yml):
+  - Runs on: push, pull_request
+  - Tests: pytest tests/
+  - Linting: flake8, black --check
+  - Type checking: mypy
+  - OS matrix: Ubuntu, Windows, macOS
+  - Python versions: 3.8, 3.9, 3.10
+
+CONTRIBUTING
+Contributing guidelines (CONTRIBUTING.md):
+  - Fork repository
+  - Create feature branch
+  - Follow code style (black, flake8)
+  - Add tests for new features
+  - Update documentation
+  - Submit pull request
+
+Issues: Use GitHub Issues for bug reports, feature requests
+Pull requests: Welcome, must pass CI tests

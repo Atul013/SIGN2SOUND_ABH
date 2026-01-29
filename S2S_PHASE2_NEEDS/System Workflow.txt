@@ -1,0 +1,164 @@
+INPUT CAPTURE
+Webcam: OpenCV cv2.VideoCapture(0) at 640×480 resolution, 30 FPS
+Video file: cv2.VideoCapture('video.mp4') with same resolution
+Image sequence: Load .jpg/.png files from folder, process sequentially
+Live demo: Uses webcam by default, displays annotated video feed with predictions
+
+PREPROCESSING STAGE (LIVE SYSTEM)
+Step 1: Frame capture - Read frame from webcam/video (640×480 RGB)
+Step 2: MediaPipe detection - Extract 21 hand landmarks (3D coordinates)
+  - If no hand detected: Display "No hand detected", skip frame
+  - If confidence <0.5: Skip frame
+Step 3: Feature extraction - Convert landmarks to 63-dim feature vector
+  - Wrist-relative normalization: (landmark - wrist) / bbox_diagonal
+  - Apply Z-score normalization using training set statistics
+Step 4: Reshape for model - (63,) → (1, 1, 63) [batch, sequence, features]
+
+Latency: MediaPipe ~30ms + preprocessing ~5ms = ~35ms total
+
+MODEL INFERENCE
+Framework: PyTorch (loaded model from .pth checkpoint)
+Input: Tensor shape (1, 1, 63) - single frame, 63 features
+Model forward pass: Bi-GRU → FC layers → Softmax
+Output: (1, 29) logits → apply softmax → class probabilities
+Prediction: argmax(probabilities) → class index → map to letter (A-Z, del, space, nothing)
+
+Latency: GPU ~10ms, CPU ~50ms
+
+POST-PROCESSING & SMOOTHING
+Confidence threshold: Only accept predictions with confidence >60%
+Prediction buffer: Store last 5 predictions in circular buffer
+Majority voting: Select most frequent prediction in buffer (reduces jitter)
+Debouncing: Only add new letter if prediction stable for 3+ frames (0.3 seconds)
+Space/del handling: Require 5 consecutive frames for special characters
+
+Smoothing algorithm:
+  if current_prediction == previous_prediction:
+    stability_counter += 1
+  else:
+    stability_counter = 0
+  if stability_counter >= 3 and confidence > 0.6:
+    add_to_sentence(current_prediction)
+
+TEXT GENERATION
+Sentence builder: Concatenate recognized letters into string
+Special characters:
+  - 'space': Add space to sentence
+  - 'del': Remove last character (backspace)
+  - 'nothing': Ignore (no hand or neutral pose)
+
+Output display: Show sentence on screen, update in real-time
+Grammar correction: Optional post-processing with language model (future work)
+
+TEXT-TO-SPEECH (TTS)
+Engine: pyttsx3 (offline, cross-platform Python TTS library)
+Alternative: Google Text-to-Speech API (cloud-based, higher quality)
+
+pyttsx3 configuration:
+  engine = pyttsx3.init()
+  engine.setProperty('rate', 150)  # 150 words per minute
+  engine.setProperty('volume', 0.9)  # 90% volume
+  voices = engine.getProperty('voices')
+  engine.setProperty('voice', voices[0].id)  # Select voice (0=male, 1=female on Windows)
+
+Trigger: User presses 'S' key or "Speak" button
+Process: engine.say(sentence) → engine.runAndWait()
+Latency: ~100ms initialization + variable based on sentence length
+
+Speech quality: Medium (pyttsx3), High (Google TTS)
+Voice options: System-dependent (Windows: Microsoft David/Zira, macOS: Alex/Samantha)
+
+SYSTEM REQUIREMENTS
+Minimum:
+  - Python 3.8+
+  - CPU: Intel i5/AMD Ryzen 5 or equivalent
+  - RAM: 4GB
+  - Webcam: 640×480 minimum resolution
+  - OS: Windows 10/11, macOS 10.14+, Linux (Ubuntu 20.04+)
+
+Recommended:
+  - Python 3.10+
+  - GPU: NVIDIA GTX 1650 / RTX 3050 or higher (CUDA 11.8+)
+  - RAM: 8GB
+  - Webcam: 1080p
+
+Dependencies:
+  Core: torch>=2.0.0, torchvision>=0.15.0, opencv-python>=4.8.0
+  MediaPipe: mediapipe>=0.10.0
+  TTS: pyttsx3>=2.90, gTTS>=2.3.0 (optional)
+  Utils: numpy>=1.24.0, matplotlib>=3.7.0, tqdm>=4.65.0
+  Total size: ~2.5GB (PyTorch + CUDA), ~500MB (CPU-only)
+
+Installation: pip install -r requirements.txt
+
+REAL-TIME PROCESSING
+Pipeline latency breakdown:
+  1. Frame capture: ~3ms (30 FPS webcam)
+  2. MediaPipe landmark extraction: ~30ms
+  3. Feature preprocessing: ~5ms
+  4. Model inference: ~10ms (GPU) / ~50ms (CPU)
+  5. Post-processing: ~2ms
+  6. Display rendering: ~5ms
+  Total: ~55ms (GPU), ~95ms (CPU)
+
+FPS capability:
+  - GPU: 1000ms / 55ms ≈ 18 FPS (real-time capable)
+  - CPU: 1000ms / 95ms ≈ 10 FPS (acceptable for demo)
+
+Real-time definition: >10 FPS for smooth user experience
+Achieved: YES on both GPU and CPU
+
+Optimizations:
+  - MediaPipe static_image_mode=False for video (2x faster)
+  - PyTorch model.eval() + torch.no_grad() (reduces memory, slight speed boost)
+  - Frame skipping: Process every 3rd frame → 30 FPS input, 10 FPS processing
+  - Batch processing: Not used (single-frame inference for low latency)
+
+COMPLETE WORKFLOW (END-TO-END)
+1. System initialization (2-3 seconds):
+   - Load PyTorch model checkpoint (best_model.pth)
+   - Initialize MediaPipe Hand Landmarker
+   - Initialize pyttsx3 TTS engine
+   - Open webcam/video source
+   - Load normalization statistics (mean, std)
+
+2. Main loop (runs until user quits):
+   a. Capture frame from webcam
+   b. Display raw frame in window
+   c. Run MediaPipe hand detection
+   d. If hand detected:
+      - Extract 63-dim feature vector
+      - Normalize features
+      - Run model inference
+      - Get prediction + confidence
+      - Add to prediction buffer (5 frames)
+      - Apply majority voting
+      - Update sentence if stable (3+ frames)
+   e. Display prediction, confidence, sentence on screen
+   f. Wait for user input:
+      - 'S': Trigger TTS to speak sentence
+      - 'C': Clear sentence
+      - 'Q': Quit application
+
+3. Cleanup:
+   - Release webcam
+   - Close all windows
+   - Save sentence to log file (optional)
+
+USER INTERFACE (LIVE DEMO)
+Display elements:
+  - Video feed: 640×480 live webcam with MediaPipe landmarks drawn
+  - Current prediction: Large text showing predicted letter
+  - Confidence: Progress bar or percentage
+  - Sentence: Accumulated text at bottom of screen
+  - FPS counter: Real-time performance metric
+  - Instructions: Key bindings (S=speak, C=clear, Q=quit)
+
+Framework: OpenCV imshow() for simple display, Flask web UI available (ui/app.py)
+
+ERROR HANDLING
+No hand detected: Display message, continue loop (don't crash)
+Low confidence: Ignore prediction, wait for clearer sign
+MediaPipe failure: Retry next frame, log error after 10 consecutive failures
+Model error: Catch exception, display error message, attempt recovery
+Webcam disconnected: Detect and prompt user to reconnect

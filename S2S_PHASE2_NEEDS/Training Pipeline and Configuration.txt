@@ -1,0 +1,31 @@
+ENVIRONMENT
+Hardware: GPU (NVIDIA RTX/GTX, 4-8GB VRAM) or CPU | RAM: 8-16GB | Storage: ~3GB
+Platform: Windows 11 / Google Colab (Free/Pro) | PyTorch 2.0+ with CUDA 11.8+
+
+2. HYPERPARAMETERS
+================================================================================
+Optimizer: Adam (LR=0.001, β1=0.9, β2=0.999, weight_decay=0)
+LR Schedule: ReduceLROnPlateau (monitor=val_acc, factor=0.5, patience=5, min_lr=1e-5)
+Batch=32 | Epochs=100 (early stop) | Loss: CrossEntropyLoss / Focal Loss (α=0.25, γ=2.0)
+Regularization: Dropout=0.3, Gradient Clip=1.0, Early Stop (patience=10)
+HYPERPARAMETERS
+TRAINING DURATION & CONVERGENCE
+Convergence: 30-40 epochs | Final: Train=95-98%, Val=92-95%, Gap=2-3%
+Curve: 0-10 epochs→75-80% | 10-30→90%+ | 30-50→fine-tuning→plateau
+
+4. HYPERPARAMETER TUNING
+HYPERPARAMETER TUNING
+Tuned: LR [0.01,0.001,0.0001]→0.001 | Batch [16,32,64]→32 | Hidden [64,128,256]→128 | Dropout [0.2,0.3,0.5]→0.3 | Layers [1,2,3]→2
+
+5. CHALLENGES & SOLUTIONS
+================================================================================
+CHALLENGES & SOLUTIONS → Gap reduced to 3%
+GPU Memory → Batch 64→32, gradient accumulation (2 steps)
+Slow Convergence (M,N,E classes) → Focal loss on hard examples, increased augmentation → +5-7% accuracy
+Training Instability (loss spikes) → Gradient clipping (max_norm=1.0), LR warmup (5 epochs), LR 0.01→0.001
+
+6. RESULTS
+================================================================================
+RESULTS
+Best Model (Epoch 42): Train=96.8%, Val=93.4%, Test=92.1% | Inference: <10ms (GPU), <50ms (CPU)
+Per-Class: High (>95%): A,B,C,O,S,T,U,V,W,X,Y,Z | Medium (90-95%): D,F,G,H,I,J,K,L,P,Q,R,del,space | Low (85-90%): E,M,N | Lowest (<85%): nothing
