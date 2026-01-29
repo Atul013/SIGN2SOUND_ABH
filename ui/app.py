@@ -86,22 +86,21 @@ def load_model():
         traceback.print_exc()
         return False
 
-def preprocess_landmarks(landmarks):
-    """Preprocess landmarks for model input"""
-    # Manual wrist-relative normalization
-    wrist = landmarks[0]
-    wrist_x, wrist_y, wrist_z = wrist['x'], wrist['y'], wrist['z']
+def preprocess_landmarks(landmarks, handedness='Right'):
+    """Preprocess landmarks for model input - matches training preprocessing exactly"""
+    from features.feature_utils import FeatureNormalizer
     
-    # Normalize all landmarks relative to wrist
-    normalized_landmarks = []
-    for lm in landmarks:
-        normalized_landmarks.append({
-            'x': lm['x'] - wrist_x,
-            'y': lm['y'] - wrist_y,
-            'z': lm['z'] - wrist_z
-        })
+    # Create hand_data structure matching training format
+    hand_data = {
+        'type': handedness,
+        'landmarks': landmarks
+    }
     
-    # Convert to numpy array
+    # Use the SAME normalization as training
+    normalized_hand = FeatureNormalizer.normalize_hand_to_wrist(hand_data)
+    normalized_landmarks = normalized_hand['landmarks']
+    
+    # Convert to numpy array (21 landmarks * 3 coordinates = 63 features)
     features = np.array([[lm['x'], lm['y'], lm['z']] for lm in normalized_landmarks])
     features = features.flatten()
     
@@ -180,8 +179,8 @@ def inference():
             landmarks = hand_data['landmarks']
             handedness = hand_data.get('handedness', 'Unknown')
             
-            # Preprocess and predict
-            features = preprocess_landmarks(landmarks)
+            # Preprocess and predict (pass handedness for correct normalization)
+            features = preprocess_landmarks(landmarks, handedness)
             class_id, confidence = predict(features)
             
             if class_id is not None:
