@@ -162,8 +162,16 @@ async function captureAndInfer() {
     }
 }
 
+// (Simulation removed)
+
 function updatePrediction(letter, confidence) {
-    document.getElementById('predictedLetter').textContent = letter;
+    // Determine display text
+    let displayLetter = letter;
+    if (letter === 'del') displayLetter = '⌫';
+    if (letter === 'space' || letter === 'spc') displayLetter = '␣';
+    if (letter === 'nothing' || letter === 'nil') displayLetter = '-';
+
+    document.getElementById('predictedLetter').textContent = displayLetter;
     document.getElementById('confidence').textContent = `${confidence}%`;
 
     // Highlight in alphabet grid
@@ -175,6 +183,7 @@ function updatePrediction(letter, confidence) {
     });
 
     // Add to text output (with debouncing)
+    // Pass raw 'letter' so addToText handles the logic (del/space) correctly
     if (confidence > 85) {
         addToText(letter);
     }
@@ -364,6 +373,11 @@ async function fetchRealMetrics() {
             // Update stats in hero section
             document.querySelectorAll('.stat-number')[2].textContent = `${bestValAcc}%`;
         }
+
+        // Update stats in hero section
+        document.querySelector('.stat-card:nth-child(2) .stat-value').textContent =
+            formatNumber(data.train_samples + data.val_samples);
+
     } catch (error) {
         console.log('Metrics API not available');
     }
@@ -389,19 +403,52 @@ async function performInference(imageData) {
         const data = await response.json();
 
         if (data.success) {
-            updatePrediction(data.prediction, data.confidence * 100);
+            updatePrediction(data.prediction, (data.confidence * 100).toFixed(1));
+
+            // Draw landmarks if available
+            if (data.landmarks) {
+                drawLandmarks(data.landmarks.map(([x, y, z]) => ({ x, y, z })));
+            } else {
+                clearLandmarks();
+            }
+        } else {
+            // No hand detected - clear output
+            clearPrediction();
         }
     } catch (error) {
-        console.log('Inference API not available, using simulation');
+        // console.log('Inference API error:', error);
+        clearPrediction();
     }
+}
+
+function clearPrediction() {
+    document.getElementById('predictedLetter').textContent = '-';
+    document.getElementById('confidence').textContent = '-';
+    document.querySelectorAll('.letter-cell').forEach(cell => cell.classList.remove('active'));
+    clearLandmarks();
+}
+
+function clearLandmarks() {
+    const ctx = overlay.getContext('2d');
+    ctx.clearRect(0, 0, overlay.width, overlay.height);
 }
 
 // ============================================
 // Canvas Drawing for Landmarks
 // ============================================
 
+
 function drawLandmarks(landmarks) {
     const ctx = overlay.getContext('2d');
+
+    // Ensure canvas dimensions match video
+    if (webcam.videoWidth && webcam.videoHeight) {
+        if (overlay.width !== webcam.videoWidth || overlay.height !== webcam.videoHeight) {
+            overlay.width = webcam.videoWidth;
+            overlay.height = webcam.videoHeight;
+        }
+    }
+
     ctx.clearRect(0, 0, overlay.width, overlay.height);
 
     // Set canvas size to match video
@@ -428,19 +475,19 @@ function drawLandmarks(landmarks) {
         const endPoint = landmarks[end];
 
         ctx.beginPath();
-        ctx.moveTo(startPoint.x * overlay.width, startPoint.y * overlay.height);
-        ctx.lineTo(endPoint.x * overlay.width, endPoint.y * overlay.height);
+        ctx.moveTo(landmarks[start].x * overlay.width, landmarks[start].y * overlay.height);
+        ctx.lineTo(landmarks[end].x * overlay.width, landmarks[end].y * overlay.height);
         ctx.stroke();
     });
 
     // Draw landmarks
     landmarks.forEach(landmark => {
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = '#ff0000'; // Red dots
         ctx.beginPath();
         ctx.arc(
             landmark.x * overlay.width,
             landmark.y * overlay.height,
-            5,
+            4,
             0,
             2 * Math.PI
         );

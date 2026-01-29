@@ -134,8 +134,8 @@ def predict(features):
 
 @app.route('/')
 def index():
-    """Serve the main UI"""
-    return send_from_directory('.', 'index.html')
+    """Serve the main UI page"""
+    return render_template('index.html')
 
 @app.route('/api/model/status')
 def model_status():
@@ -226,6 +226,13 @@ def inference():
             'error': str(e)
         }), 500
 
+
+@app.route('/api/training/status')
+def training_status():
+    """Get current training status with real data"""
+    return jsonify(training_stats)
+
+
 @app.route('/api/metrics')
 def get_metrics():
     """Get training metrics"""
@@ -250,20 +257,27 @@ def get_metrics():
     
     return jsonify(metrics)
 
+
 @app.route('/api/preprocessing/status')
-def get_preprocessing_status():
+def preprocessing_status():
     """Get preprocessing status"""
     stats_path = os.path.join('..', 'data', 'processed', 'train', 'preprocessing_stats.json')
     if os.path.exists(stats_path):
         with open(stats_path, 'r') as f:
             stats = json.load(f)
             return jsonify({
-                'status': 'complete',
-                'total_images': stats.get('total_images', 0),
-                'successful': stats.get('successful', 0),
-                'failed': stats.get('failed', 0),
-                'success_rate': stats.get('successful', 0) / stats.get('total_images', 1) * 100
+                'success': True,
+                'prediction': predicted_letter,
+                'confidence': confidence_score,
+                'top3': top3_predictions,
+                'landmarks': [[lm['x'], lm['y'], lm['z']] for lm in ui_landmarks]
             })
+        
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'No image provided'
+            }), 400
     
     return jsonify({
         'status': 'not_started',

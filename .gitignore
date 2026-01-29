@@ -53,9 +53,9 @@ venv.bak/
 *.model
 *.weights
 *.ckpt
-*.pth
-*.pt
-checkpoints/
+# *.pth - Commented to allow trained models
+# *.pt - Commented to allow trained models
+# checkpoints/ - Commented to allow trained models
 models/
 saved_models/
 logs/
