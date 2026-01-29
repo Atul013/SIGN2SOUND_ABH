@@ -182,6 +182,8 @@ def create_dataset_splits(processed_dir: str, train_ratio: float = 0.85):
         processed_dir: Directory with processed data
         train_ratio: Ratio of training data (rest goes to validation)
     """
+    import shutil
+    
     print(f"\n{'='*70}")
     print("Creating Train/Validation Splits")
     print(f"{'='*70}\n")
@@ -212,7 +214,13 @@ def create_dataset_splits(processed_dir: str, train_ratio: float = 0.85):
         for f in val_files:
             src = os.path.join(class_train_dir, f)
             dst = os.path.join(class_val_dir, f)
-            os.rename(src, dst)
+            
+            # Remove destination if it exists
+            if os.path.exists(dst):
+                os.remove(dst)
+            
+            # Move file
+            shutil.move(src, dst)
         
         print(f"{class_name}: {split_idx} train, {len(val_files)} val")
     

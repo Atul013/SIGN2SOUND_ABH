@@ -25,9 +25,9 @@ model:
 # Data Configuration
 data:
   data_dir: "data"
-  batch_size: 32
+  batch_size: 16  # Reduced for 4GB VRAM (was 32)
   max_sequence_length: 30
-  num_workers: 4
+  num_workers: 2  # Reduced for 4GB VRAM (was 4)
   
   # Data augmentation
   augmentation:
@@ -89,8 +89,8 @@ evaluation:
 
 # Hardware Configuration
 hardware:
-  device: "auto"  # Options: "auto", "cpu", "cuda", "mps"
-  mixed_precision: false
+  device: "cuda"  # Force CUDA for RTX 3050
+  mixed_precision: true  # Enable for 4GB VRAM optimization
   num_threads: 4
 
 # Reproducibility
