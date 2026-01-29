@@ -22,6 +22,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models.asl_model import create_model
 from features.hand_landmarks import HandLandmarks
 from data.vocabulary import ID_TO_LETTER, NUM_CLASSES
+from grammar_correction import load_grammar_model, add_grammar_routes
 
 app = Flask(__name__, 
             static_folder='static',
@@ -286,15 +287,28 @@ def health():
 
 if __name__ == '__main__':
     print("=" * 70)
-    print("Sign2Sound UI Server with Model Integration")
+    print("Sign2Sound UI Server with Model Integration + Grammar Correction")
     print("=" * 70)
     
-    # Load model
-    print("\nLoading model...")
+    # Load ASL recognition model
+    print("\nLoading ASL recognition model...")
     if load_model():
-        print("[OK] Model loaded successfully!")
+        print("[OK] ASL model loaded successfully!")
     else:
-        print("[ERROR] Failed to load model. Inference will not work.")
+        print("[ERROR] Failed to load ASL model. Inference will not work.")
+    
+    # Load grammar correction model (optional)
+    print("\nLoading grammar correction model...")
+    try:
+        if load_grammar_model():
+            print("[OK] Grammar model loaded successfully!")
+            # Add grammar correction routes
+            add_grammar_routes(app)
+        else:
+            print("[WARN] Grammar model not loaded. Using fallback corrections.")
+    except Exception as e:
+        print(f"[WARN] Grammar model loading failed: {e}")
+        print("[INFO] Will use simple rule-based corrections instead.")
     
     print("\nStarting server...")
     print("Open your browser and navigate to: http://localhost:5000")
@@ -303,3 +317,4 @@ if __name__ == '__main__':
     print()
     
     app.run(debug=True, host='0.0.0.0', port=5000, threaded=True)
+

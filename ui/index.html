@@ -140,49 +140,6 @@
                         Stop Camera
                     </button>
                 </div>
-
-                <!-- ASL Sign Display Box -->
-                <div class="sign-display-card">
-                    <div class="card-header">
-                        <h3>ASL Sign Reference</h3>
-                    </div>
-                    <div class="sign-image-container">
-                        <img id="signImage" src="static/images/asl_alphabet/A.jpg" alt="ASL Sign" class="sign-image">
-                        <div class="sign-label" id="signLabel">A</div>
-                    </div>
-                </div>
-
-                <!-- Word to Sign Converter -->
-                <div class="word-converter-card">
-                    <div class="card-header">
-                        <h3>Word to Sign Converter</h3>
-                    </div>
-                    <div class="converter-input">
-                        <input type="text" id="wordInput" placeholder="Type a word (e.g., HELLO)" maxlength="20">
-                        <button class="convert-btn" onclick="convertWord()">Convert</button>
-                    </div>
-                    <div class="converter-controls">
-                        <button class="nav-btn" id="prevBtn" onclick="showPrevSign()" disabled>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M15 18l-6-6 6-6" />
-                            </svg>
-                            Prev
-                        </button>
-                        <div class="letter-indicator" id="letterIndicator">-</div>
-                        <button class="nav-btn" id="nextBtn" onclick="showNextSign()" disabled>
-                            Next
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M9 18l6-6-6-6" />
-                            </svg>
-                        </button>
-                    </div>
-                    <button class="stop-btn" id="stopConverterBtn" onclick="stopConverter()" disabled>
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                            <rect x="6" y="6" width="12" height="12" />
-                        </svg>
-                        Stop
-                    </button>
-                </div>
             </div>
 
             <div class="results-panel">
@@ -400,7 +357,6 @@
     </footer>
 
     <script src="static/js/main.js"></script>
-    <script src="static/js/sign_features.js"></script>
 </body>
 
 </html>

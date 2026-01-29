@@ -216,14 +216,58 @@ function clearText() {
     document.querySelector('.output-text').textContent = '';
 }
 
-function speakText() {
-    if ('speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance(recognizedText);
-        utterance.rate = 0.9;
-        utterance.pitch = 1;
-        speechSynthesis.speak(utterance);
-    } else {
-        alert('Text-to-speech not supported in this browser.');
+async function speakText() {
+    if (!recognizedText || recognizedText.trim().length === 0) {
+        alert('No text to speak');
+        return;
+    }
+
+    try {
+        // Call grammar correction API
+        const response = await fetch('/api/correct_grammar', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ text: recognizedText })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            const correctedText = data.corrected;
+
+            // Update display with corrected text
+            document.querySelector('.output-text').textContent = correctedText;
+            recognizedText = correctedText;
+
+            // Speak corrected text
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(correctedText);
+                utterance.rate = 0.9;
+                utterance.pitch = 1;
+                speechSynthesis.speak(utterance);
+            }
+        } else {
+            // Fallback: speak original text
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(recognizedText);
+                utterance.rate = 0.9;
+                utterance.pitch = 1;
+                speechSynthesis.speak(utterance);
+            }
+        }
+    } catch (error) {
+        console.error('Grammar correction error:', error);
+        // Fallback: speak original text
+        if ('speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(recognizedText);
+            utterance.rate = 0.9;
+            utterance.pitch = 1;
+            speechSynthesis.speak(utterance);
+        } else {
+            alert('Text-to-speech not supported in this browser.');
+        }
     }
 }
 
